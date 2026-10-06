@@ -152,3 +152,20 @@ export function daysLabel(n: number): string {
 }
 
 export { addDays };
+
+/** "ahora", "hace 5 min", "hace 3 h", "hace 2 días". */
+export function agoLabel(iso: string, now: number = Date.now()): string {
+  const min = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));
+  if (min < 1) return "ahora";
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  const d = Math.round(h / 24);
+  return `hace ${d} ${d === 1 ? "día" : "días"}`;
+}
+
+/** "+18 %" / "−5 %" (con el signo menos tipográfico). */
+export function formatPct(pct: number): string {
+  const n = Math.round(Math.abs(pct));
+  return `${pct >= 0 ? "+" : "−"}${n} %`;
+}

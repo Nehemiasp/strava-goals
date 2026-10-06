@@ -62,3 +62,23 @@ export interface AthleteInfo {
   avatar: string | null;
   demo: boolean;
 }
+
+/**
+ * Lo único que se comparte con la persona vinculada: totales por día y deporte.
+ * Nunca ids, títulos, rutas, frecuencia cardíaca ni horas.
+ */
+export interface SharedDay {
+  date: string;
+  sport: Sport;
+  distance: number;
+  movingTime: number;
+  elevation: number;
+  count: number;
+}
+
+export interface PartnerInfo {
+  name: string;
+  avatar: string | null;
+}
+
+export type VersusMetric = "distance" | "time" | "elevation" | "count";

@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { ALL_SPORTS, type Activity, type Goal, type Sport } from "../types";
+import { generateCode, INVITE_TTL_MS } from "../link-code";
 import { required } from "./env";
 import type { AthleteRow, GoalPatch, Store } from "./store";
 
@@ -162,6 +163,56 @@ export function createSupabaseStore(): Store {
         .limit(2000);
       fail("listActivities", error);
       return (data ?? []).map(activityFrom);
+    },
+    async createInvite(athleteId) {
+      const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();
+      const del = await db.from("link_invites").delete().eq("from_athlete", athleteId);
+      fail("createInvite.delete", del.error);
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const code = generateCode();
+        const { error } = await db.from("link_invites").insert({ code, from_athlete: athleteId, expires_at: expiresAt });
+        if (!error) return { code, expiresAt };
+        if (error.code !== "23505") fail("createInvite.insert", error); // 23505: código repetido, se reintenta
+      }
+      throw new Error("Supabase (createInvite): no se pudo generar un código único");
+    },
+    async acceptInvite(code, accepterId) {
+      const { data: inv, error } = await db.from("link_invites").select("*").eq("code", code).maybeSingle();
+      fail("acceptInvite.select", error);
+      if (!inv || new Date(inv.expires_at as string).getTime() < Date.now()) {
+        if (inv) await db.from("link_invites").delete().eq("code", code);
+        return { ok: false, reason: "invalid" };
+      }
+      const from = Number(inv.from_athlete);
+      if (from === accepterId) return { ok: false, reason: "own" };
+      const { data: existing, error: e2 } = await db
+        .from("athlete_links")
+        .select("a")
+        .or(`a.in.(${from},${accepterId}),b.in.(${from},${accepterId})`)
+        .limit(1);
+      fail("acceptInvite.links", e2);
+      if ((existing?.length ?? 0) > 0) return { ok: false, reason: "linked" };
+      const [a, b] = from < accepterId ? [from, accepterId] : [accepterId, from];
+      const ins = await db.from("athlete_links").insert({ a, b });
+      fail("acceptInvite.insert", ins.error);
+      await db.from("link_invites").delete().in("from_athlete", [from, accepterId]);
+      const { data: p, error: e3 } = await db.from("athletes").select("id,name,avatar").eq("id", from).single();
+      fail("acceptInvite.partner", e3);
+      return { ok: true, partner: { id: Number(p!.id), name: p!.name as string, avatar: (p!.avatar as string | null) ?? null } };
+    },
+    async getLink(athleteId) {
+      const { data, error } = await db.from("athlete_links").select("a,b").or(`a.eq.${athleteId},b.eq.${athleteId}`).limit(1);
+      fail("getLink.select", error);
+      const row = data?.[0];
+      if (!row) return null;
+      const partnerId = Number(row.a) === athleteId ? Number(row.b) : Number(row.a);
+      const { data: p, error: e2 } = await db.from("athletes").select("id,name,avatar").eq("id", partnerId).maybeSingle();
+      fail("getLink.partner", e2);
+      return p ? { id: Number(p.id), name: p.name as string, avatar: (p.avatar as string | null) ?? null } : null;
+    },
+    async deleteLink(athleteId) {
+      const { error } = await db.from("athlete_links").delete().or(`a.eq.${athleteId},b.eq.${athleteId}`);
+      fail("deleteLink", error);
     },
     async syncActivities(athleteId, fromDate, fresh) {
       if (fresh.length > 0) {

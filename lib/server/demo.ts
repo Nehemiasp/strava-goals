@@ -4,6 +4,8 @@ import { encodePolyline } from "../polyline";
 import type { Activity, NewGoal, Sport } from "../types";
 
 export const DEMO_ATHLETE_ID = 1;
+export const DEMO_PARTNER_ID = 2;
+export const isDemoId = (id: number) => id === DEMO_ATHLETE_ID || id === DEMO_PARTNER_ID;
 
 // PRNG determinista (mulberry32) para que el demo sea estable entre recargas.
 function rng(seed: number) {
@@ -41,8 +43,9 @@ const NAMES = {
 } as const;
 
 /** Genera ~16 semanas de actividad, la más reciente terminando en `today`. */
-export function demoActivities(today: string): Activity[] {
-  const rand = rng(42);
+export function demoActivities(today: string, athleteId: number = DEMO_ATHLETE_ID): Activity[] {
+  // Cada atleta demo tiene su propia semilla para que los números no sean idénticos.
+  const rand = rng(athleteId === DEMO_PARTNER_ID ? 7 : 42);
   const out: Activity[] = [];
   let id = 9_000_000;
   for (let back = 0; back < 112; back++) {

@@ -9,6 +9,7 @@ import { TopBar } from "@/components/top-bar";
 import { SportsPicker } from "@/components/sports-picker";
 import { Button, Chip, ChipGroup, Toggle } from "@/components/ui";
 import { useData } from "@/lib/client/data";
+import { copyText } from "@/lib/client/clipboard";
 import { usePersisted } from "@/lib/client/use-persisted";
 import {
   buildBrief,
@@ -22,25 +23,6 @@ import {
 } from "@/lib/export-brief";
 
 const nf = new Intl.NumberFormat("es");
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Respaldo para contextos sin Clipboard API (HTTP, WebView antiguos).
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    ta.remove();
-    return ok;
-  }
-}
 
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (

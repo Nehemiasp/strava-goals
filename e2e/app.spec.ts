@@ -258,3 +258,104 @@ test("Goals: un atajo de periodo recalcula las fechas", async ({ page }) => {
   await dialog.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(dialog).toBeHidden();
 });
+
+test("Récords: enlace en Hoy y página con racha, mejor semana y salidas más largas", async ({ page }) => {
+  await login(page);
+  await page.getByRole("link", { name: /Récords y resumen/ }).click();
+  await expect(page).toHaveURL(/\/records$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Récords y resumen" })).toBeVisible();
+  await expect(page.getByText("Racha actual")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mejor semana" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Salida más larga" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mejor ritmo corriendo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Esta semana", level: 3 })).toBeVisible();
+  // Abre el detalle de una salida desde los récords.
+  await page.getByRole("button", { name: /kilómetros/ }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("Reto: sin vínculo la API responde 403 y los códigos inválidos se rechazan", async ({ page }) => {
+  await login(page);
+  await page.request.delete("/api/link");
+  expect((await page.request.get("/api/versus")).status()).toBe(403);
+  const bad = await page.request.post("/api/link/accept", { data: { code: "ZZZZ-9999" } });
+  expect(bad.status()).toBe(400);
+  expect((await page.request.post("/api/link/accept", { data: { code: "abc" } })).status()).toBe(400);
+  // El propio código no se puede aceptar.
+  const { code } = await (await page.request.post("/api/link/invite")).json();
+  const own = await page.request.post("/api/link/accept", { data: { code } });
+  expect(own.status()).toBe(400);
+  expect((await own.json()).error).toContain("generaste tú");
+});
+
+test("Reto entre hermanos: invitar, aceptar, comparar, privacidad y desvincular", async ({ browser }) => {
+  const ctxA = await browser.newContext();
+  const ctxB = await browser.newContext();
+  const a = await ctxA.newPage();
+  const b = await ctxB.newPage();
+  try {
+    await login(a);
+    await b.goto("/api/auth/strava?as=2");
+    await expect(b.getByText("Esta semana", { exact: true })).toBeVisible();
+    await a.request.delete("/api/link");
+    await b.request.delete("/api/link");
+
+    // A genera un código en Ajustes.
+    await a.reload();
+    await expect(a.getByText("Reta a tu hermano").first()).toBeVisible();
+    await a.getByRole("button", { name: "Ajustes" }).click();
+    await a.getByRole("button", { name: "Generar un código" }).click();
+    const label = await a.locator('p[aria-label^="Código "]').getAttribute("aria-label");
+    const code = label!.replace("Código ", "");
+    expect(code).toMatch(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
+
+    // B lo acepta (en minúsculas y sin guion: se normaliza).
+    await b.getByRole("button", { name: "Ajustes" }).click();
+    await b.getByRole("button", { name: "Tengo un código" }).click();
+    await b.getByLabel("Código de invitación").fill(code.toLowerCase().replace("-", ""));
+    await b.getByRole("button", { name: "Vincular" }).click();
+    await expect(b.getByText("Reto con Atleta demo")).toBeVisible();
+
+    // El código ya no sirve una segunda vez.
+    const reuse = await b.request.post("/api/link/accept", { data: { code } });
+    expect(reuse.status()).toBeGreaterThanOrEqual(400);
+
+    // A ve la tarjeta en Hoy y la pantalla del reto.
+    await a.keyboard.press("Escape");
+    await a.reload();
+    const card = a.getByRole("link", { name: /Tú vs\. Hermano/ });
+    await expect(card).toBeVisible();
+    await card.click();
+    await expect(a).toHaveURL(/\/versus$/);
+    await expect(a.getByRole("heading", { level: 1, name: "Tú vs. Hermano" })).toBeVisible();
+    await expect(a.getByRole("heading", { name: "Últimas 8 semanas" })).toBeVisible();
+    await a.getByRole("radio", { name: "Este mes" }).click();
+    await a.getByRole("radio", { name: "Tiempo" }).click();
+    await expect(a.getByRole("img", { name: /% para ti y/ })).toBeVisible();
+
+    // Privacidad: solo totales por día y deporte.
+    const res = await a.request.get("/api/versus");
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(Object.keys(body).sort()).toEqual(["days", "partner", "stale", "syncedAt"]);
+    expect(Object.keys(body.partner).sort()).toEqual(["avatar", "name"]);
+    expect(body.days.length).toBeGreaterThan(10);
+    for (const d of body.days) {
+      expect(Object.keys(d).sort()).toEqual(["count", "date", "distance", "elevation", "movingTime", "sport"]);
+    }
+    const raw = JSON.stringify(body);
+    for (const secret of ["polyline", "avgHr", "startedAt", "Caminata", "Rodaje", "Series 6", "Rodada"]) expect(raw).not.toContain(secret);
+
+    // Desvincular desde Ajustes corta el acceso de inmediato para ambos.
+    await a.getByRole("link", { name: "Volver a Hoy" }).click();
+    await a.getByRole("button", { name: "Ajustes" }).click();
+    await a.getByRole("button", { name: "Desvincular" }).click();
+    await a.getByRole("alertdialog").getByRole("button", { name: "Desvincular" }).click();
+    await expect(a.getByText("Vínculo eliminado")).toBeVisible();
+    expect((await a.request.get("/api/versus")).status()).toBe(403);
+    expect((await b.request.get("/api/versus")).status()).toBe(403);
+  } finally {
+    await ctxA.close();
+    await ctxB.close();
+  }
+});

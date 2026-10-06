@@ -2,7 +2,7 @@ import "server-only";
 import { addDays, todayLocal } from "../dates";
 import type { Activity } from "../types";
 import { decrypt, encrypt } from "./crypto";
-import { DEMO_ATHLETE_ID, demoActivities } from "./demo";
+import { demoActivities, isDemoId } from "./demo";
 import { isDemo } from "./env";
 import { fetchActivities, refreshToken, StravaError } from "./strava";
 import { getStore, type AthleteRow } from "./store";
@@ -46,8 +46,8 @@ export async function getActivities(athleteId: number, force = false): Promise<A
   const today = todayLocal();
   const since = addDays(today, -FIRST_SYNC_DAYS);
 
-  if (isDemo() && athleteId === DEMO_ATHLETE_ID) {
-    return { activities: demoActivities(today), stale: false, syncedAt: new Date().toISOString() };
+  if (isDemo() && isDemoId(athleteId)) {
+    return { activities: demoActivities(today, athleteId), stale: false, syncedAt: new Date().toISOString() };
   }
 
   const store = await getStore();

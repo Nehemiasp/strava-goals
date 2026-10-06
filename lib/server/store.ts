@@ -15,6 +15,17 @@ export interface AthleteRow {
 
 export type GoalPatch = Partial<Pick<Goal, "title" | "target" | "status" | "sports" | "period" | "startDate" | "endDate">>;
 
+export interface LinkedPartner {
+  id: number;
+  name: string;
+  avatar: string | null;
+}
+
+export type AcceptResult =
+  | { ok: true; partner: LinkedPartner }
+  /** `invalid` cubre código inexistente, caducado o ya usado: no se distingue a propósito. */
+  | { ok: false; reason: "invalid" | "own" | "linked" };
+
 export interface Store {
   getAthlete(id: number): Promise<AthleteRow | null>;
   upsertAthlete(row: AthleteRow): Promise<void>;
@@ -26,6 +37,12 @@ export interface Store {
   updateGoal(athleteId: number, id: string, patch: GoalPatch): Promise<Goal | null>;
   deleteGoal(athleteId: number, id: string): Promise<boolean>;
   listActivities(athleteId: number, sinceDate: string): Promise<Activity[]>;
+  /** Crea una invitación de 24 h para este atleta, reemplazando la anterior. */
+  createInvite(athleteId: number): Promise<{ code: string; expiresAt: string }>;
+  /** Consume una invitación y crea el vínculo. `code` ya viene normalizado. */
+  acceptInvite(code: string, accepterId: number): Promise<AcceptResult>;
+  getLink(athleteId: number): Promise<LinkedPartner | null>;
+  deleteLink(athleteId: number): Promise<void>;
   /** Inserta/actualiza y elimina las actividades con `date >= fromDate` que ya no vienen de Strava. */
   syncActivities(athleteId: number, fromDate: string, fresh: Activity[]): Promise<void>;
 }

@@ -2,13 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { todayLocal } from "../dates";
-import { DEFAULT_SETTINGS, type Activity, type AthleteInfo, type Goal, type NewGoal, type Settings } from "../types";
+import { DEFAULT_SETTINGS, type Activity, type AthleteInfo, type Goal, type NewGoal, type PartnerInfo, type Settings } from "../types";
 
 interface DataState {
   me: AthleteInfo | null;
   activities: Activity[];
   goals: Goal[];
   settings: Settings;
+  /** Persona vinculada para el reto, o `null`. */
+  partner: PartnerInfo | null;
+  /** `false` si el servidor no tiene aún las tablas del vínculo: la interfaz oculta el reto. */
+  linkAvailable: boolean;
   today: string;
   /** `loading` solo en la primera carga; después se refresca en segundo plano. */
   status: "loading" | "ready" | "error";
@@ -20,6 +24,9 @@ interface DataState {
   updateGoal: (id: string, patch: Partial<Pick<Goal, "title" | "target" | "status" | "sports" | "period" | "startDate" | "endDate">>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   setSettings: (patch: Partial<Settings>) => void;
+  createInvite: () => Promise<{ code: string; expiresAt: string }>;
+  acceptInvite: (code: string) => Promise<PartnerInfo>;
+  unlink: () => Promise<void>;
 }
 
 const Ctx = createContext<DataState | null>(null);
@@ -70,6 +77,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS);
+  const [partner, setPartner] = useState<PartnerInfo | null>(null);
+  const [linkAvailable, setLinkAvailable] = useState(false);
   const [today, setToday] = useState("");
   const [status, setStatus] = useState<DataState["status"]>("loading");
   const [stale, setStale] = useState(false);
@@ -82,15 +91,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     inflight.current = true;
     setRefreshing(true);
     try {
-      const [m, a, g] = await Promise.all([
+      const [m, a, g, l] = await Promise.all([
         api<AthleteInfo>("/api/me"),
         api<{ activities: Activity[]; stale: boolean }>(`/api/activities${force ? "?refresh=1" : ""}`),
         api<{ goals: Goal[] }>("/api/goals"),
+        // El vínculo es opcional: si falla no debe afectar al resto de la app.
+        api<{ available: boolean; partner: PartnerInfo | null }>("/api/link").catch(() => ({ available: false, partner: null })),
       ]);
       setMe(m);
       setActivities(a.activities);
       setStale(a.stale);
       setGoals(g.goals);
+      setPartner(l.partner);
+      setLinkAvailable(l.available);
       setToday(todayLocal());
       setError(null);
       setStatus("ready");
@@ -148,9 +161,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setGoals((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
+  const createInvite = useCallback(() => api<{ code: string; expiresAt: string }>("/api/link/invite", { method: "POST" }), []);
+
+  const acceptInvite = useCallback(async (code: string) => {
+    const { partner: p } = await api<{ partner: PartnerInfo }>("/api/link/accept", { method: "POST", body: JSON.stringify({ code }) });
+    setPartner(p);
+    return p;
+  }, []);
+
+  const unlink = useCallback(async () => {
+    await api("/api/link", { method: "DELETE" });
+    setPartner(null);
+  }, []);
+
   const value = useMemo<DataState>(
-    () => ({ me, activities, goals, settings, today, status, stale, error, refreshing, refresh, createGoal, updateGoal, deleteGoal, setSettings }),
-    [me, activities, goals, settings, today, status, stale, error, refreshing, refresh, createGoal, updateGoal, deleteGoal, setSettings],
+    () => ({
+      me, activities, goals, settings, partner, linkAvailable, today, status, stale, error, refreshing,
+      refresh, createGoal, updateGoal, deleteGoal, setSettings, createInvite, acceptInvite, unlink,
+    }),
+    [me, activities, goals, settings, partner, linkAvailable, today, status, stale, error, refreshing, refresh, createGoal, updateGoal, deleteGoal, setSettings, createInvite, acceptInvite, unlink],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { ActivityList, ActivityRow } from "@/components/activity-row";
 import { GoalCard } from "@/components/goal-card";
-import { IconPlus } from "@/components/icons";
+import { IconChevron, IconPlus } from "@/components/icons";
 import { useScreenGate, StaleNotice } from "@/components/screen-states";
 import { TopBar } from "@/components/top-bar";
 import { TrendChart } from "@/components/trend-chart";
@@ -13,7 +13,10 @@ import { Button, EmptyState, SectionTitle, StatBlock } from "@/components/ui";
 import { WeekStrip } from "@/components/week-strip";
 import { useData } from "@/lib/client/data";
 import { isLive, latest, thisWeek, weeklyTrend, withProgress } from "@/lib/client/selectors";
-import { distanceUnit, formatDistance, formatMetricInline } from "@/lib/format";
+import { usePartnerDays } from "@/lib/client/use-partner-days";
+import { distanceUnit, formatDistance, formatMetricInline, formatPct } from "@/lib/format";
+import { compareWeek } from "@/lib/records";
+import { lead, toSharedDays, totals, windowFor } from "@/lib/versus";
 
 function Avatar() {
   const { me } = useData();
@@ -39,8 +42,9 @@ function Avatar() {
 
 export default function HoyPage() {
   const gate = useScreenGate();
-  const { activities, goals, settings, today } = useData();
-  const { openCreateGoal, openActivity } = useUi();
+  const { activities, goals, settings, today, partner, linkAvailable } = useData();
+  const { openCreateGoal, openActivity, openSettings } = useUi();
+  const { data: partnerData } = usePartnerDays(Boolean(partner) && Boolean(today), partner?.name ?? null);
   const { units } = settings;
 
   const week = useMemo(() => thisWeek(activities, today, settings.weekStart), [activities, today, settings.weekStart]);
@@ -48,6 +52,16 @@ export default function HoyPage() {
   const live = useMemo(() => withProgress(goals, activities, today).filter(isLive), [goals, activities, today]);
   const featured = useMemo(() => [...live].sort((a, b) => b.progress.ratio - a.progress.ratio)[0], [live]);
   const recent = useMemo(() => latest(activities, "all", 3), [activities]);
+  const cmp = useMemo(() => (today ? compareWeek(activities, today, settings.weekStart) : null), [activities, today, settings.weekStart]);
+  // Reto de la semana (distancia, los tres deportes), para la tarjeta de Hoy.
+  const versus = useMemo(() => {
+    if (!partnerData || !today) return null;
+    const f = { sports: ["run", "ride", "walk"] as const, metric: "distance" as const };
+    const { from, to } = windowFor("week", today, settings.weekStart);
+    const a = totals(toSharedDays(activities), f, from, to);
+    const b = totals(partnerData.days, f, from, to);
+    return { a, b, lead: lead(a, b) };
+  }, [partnerData, today, activities, settings.weekStart]);
 
   return (
     <>
@@ -64,6 +78,12 @@ export default function HoyPage() {
                   <div className="label text-ink-2">{week.count === 1 ? "salida" : "salidas"}</div>
                 </div>
               </div>
+              {cmp && cmp.distancePct !== null && (
+                <p className="body-s text-ink-2">
+                  <span className={`tnum font-semibold ${cmp.distancePct >= 0 ? "text-fern" : "text-ink"}`}>{formatPct(cmp.distancePct)}</span>{" "}
+                  frente a la semana pasada a este punto
+                </p>
+              )}
               <WeekStrip activities={activities} today={today} weekStart={settings.weekStart} />
               <div className="body-s flex flex-wrap gap-x-5 gap-y-1 text-ink-2">
                 {(
@@ -118,6 +138,56 @@ export default function HoyPage() {
                 </ActivityList>
               )}
             </section>
+
+            {linkAvailable && (
+              <section aria-label="Reto">
+                {partner ? (
+                  <Link href="/versus" className="block rounded-card bg-surface p-5 transition-transform active:scale-[0.99]">
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="title-m">Tú vs. {partner.name.trim().split(/\s+/)[0]}</h2>
+                      <IconChevron size={20} strokeWidth={1.75} className="text-ink-3" aria-hidden />
+                    </div>
+                    {versus ? (
+                      <>
+                        <div className="mt-3 grid grid-cols-2 gap-4">
+                          <StatBlock label="Tú" value={formatDistance(versus.a, units)} unit={distanceUnit(units)} size="m" color="var(--fern)" />
+                          <StatBlock label={partner.name.trim().split(/\s+/)[0]} value={formatDistance(versus.b, units)} unit={distanceUnit(units)} size="m" align="right" />
+                        </div>
+                        <p className="body-s mt-2 text-ink-2">
+                          {versus.lead.leader === "tie"
+                            ? "Van empatados esta semana"
+                            : versus.lead.leader === "me"
+                              ? `Vas ${formatDistance(versus.lead.diff, units)} ${distanceUnit(units)} por delante esta semana`
+                              : `${partner.name.trim().split(/\s+/)[0]} va ${formatDistance(versus.lead.diff, units)} ${distanceUnit(units)} por delante esta semana`}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="body-s mt-2 text-ink-2">Cargando…</p>
+                    )}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openSettings}
+                    className="flex min-h-14 w-full items-center justify-between gap-3 rounded-card bg-surface px-5 py-3 text-left active:bg-surface-2"
+                  >
+                    <span>
+                      <span className="block font-medium">Reta a tu hermano</span>
+                      <span className="body-s block text-ink-2">Comparen sus kilómetros de la semana</span>
+                    </span>
+                    <IconChevron size={20} strokeWidth={1.75} className="text-ink-3" aria-hidden />
+                  </button>
+                )}
+              </section>
+            )}
+
+            <Link href="/records" className="flex min-h-14 items-center justify-between gap-3 rounded-card bg-surface px-5 py-3 active:bg-surface-2">
+              <span>
+                <span className="block font-medium">Récords y resumen</span>
+                <span className="body-s block text-ink-2">Racha, mejor semana y comparaciones</span>
+              </span>
+              <IconChevron size={20} strokeWidth={1.75} className="text-ink-3" aria-hidden />
+            </Link>
 
             <section aria-label="Tendencia">
               <SectionTitle>Últimas 8 semanas</SectionTitle>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useData } from "@/lib/client/data";
+import { LinkSection } from "./link-section";
 import { Sheet } from "./sheet";
 import { SegmentedControl } from "./segmented";
 import { Button, Toggle } from "./ui";
@@ -97,6 +98,8 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
           label="Siluetas de ruta"
           hint="Muestra la forma del recorrido en cada actividad."
         />
+
+        <LinkSection onNavigate={onClose} />
 
         <div className="space-y-1 rounded-card bg-surface p-4">
           <p className="font-medium">Tus datos</p>

@@ -481,3 +481,25 @@ Cuando apruebes o ajustes estas decisiones, empiezo por el **Paso 1** (andamiaje
 | Título | No se pisa solo: si cambian objetivo o deportes aparece «Usar el título sugerido: …». |
 | Validación | El servidor valida el goal **ya combinado** con las mismas reglas que al crear (periodo ≤ 1 año, fin ≥ inicio, racha ≤ días del periodo). Las fechas de inicio y fin se envían siempre juntas. |
 | Guardado | Solo se envía lo que cambió; el botón dice «Sin cambios» y está desactivado si no hay nada que guardar. |
+
+### 15.3 Récords y resumen
+
+| Tema | Decisión |
+|---|---|
+| Dónde | Una fila «Récords y resumen» en Hoy y la página `/records`. Hoy muestra además, bajo la cifra semanal, «+18 % frente a la semana pasada a este punto». |
+| Qué | Racha actual, mejor semana, salida más larga por deporte, mejor ritmo corriendo (≥ 5 km) y comparaciones de semana y mes. |
+| Comparación justa | Siempre «hasta el mismo punto»: esta semana hasta hoy frente a la anterior hasta el mismo día de la semana (igual para el mes). Si el periodo anterior fue 0 no se muestra porcentaje. |
+| Tono | Un descenso no se pinta de rojo ni de ámbar: el porcentaje negativo va en texto neutro. |
+| Alcance | Se calcula con los últimos 12 meses sincronizados; la pantalla lo dice. |
+
+### 15.4 Reto entre hermanos
+
+| Tema | Decisión |
+|---|---|
+| Vínculo | Código de invitación de 8 caracteres (sin I, O, 0, 1), de un solo uso y con caducidad de 24 h. Ambos aceptan explícitamente; cualquiera se desvincula cuando quiera y el acceso se corta al instante. Una sola persona vinculada. |
+| Qué se comparte | **Solo totales por día y deporte** (distancia, tiempo, desnivel, salidas). Nunca títulos, rutas, mapas, frecuencia cardíaca ni la hora. El servidor solo devuelve esos campos y un test lo comprueba. |
+| Dónde | Tarjeta «Tú vs. {nombre}» en Hoy (o «Reta a tu hermano» si no hay vínculo) y la pantalla `/versus`. El vínculo se gestiona en Ajustes. No hay una quinta pestaña. |
+| Comparar | Semana o mes; distancia, tiempo, desnivel o salidas; cualquier combinación de deportes. Cifras lado a lado, barra partida, gráfico acumulado de ambos y quién ganó cada una de las últimas 8 semanas completas. |
+| Color | Tú = verde de acento; la otra persona = gris neutro (`--ink-2`). No se usa rojo/verde de «bien/mal» entre personas, y siempre hay etiqueta de texto. |
+| Frescura | Los datos de la otra persona se sincronizan con su propia sesión de Strava, con la misma caché de 10 min. La pantalla indica «actualizados hace X» y avisa si no se pudo actualizar. |
+| Sin migración | Si las tablas aún no existen, la función se oculta y el resto de la app no se ve afectado. |

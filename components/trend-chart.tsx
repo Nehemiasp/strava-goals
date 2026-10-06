@@ -7,6 +7,8 @@ export interface TrendPoint {
   value: number;
   /** Serie de referencia (p. ej. ritmo necesario). */
   ref?: number;
+  /** Segunda persona (reto entre hermanos), línea sólida secundaria. */
+  other?: number;
 }
 
 /** Línea suave sin rejilla; al arrastrar el dedo aparece un tooltip de vidrio. */
@@ -14,12 +16,17 @@ export function TrendChart({
   points,
   format,
   color = "var(--fern)",
+  otherColor = "var(--ink-2)",
+  names,
   height = 148,
   ariaLabel,
 }: {
   points: TrendPoint[];
   format: (v: number) => string;
   color?: string;
+  otherColor?: string;
+  /** Nombres para el tooltip cuando hay dos series. */
+  names?: { mine: string; other: string };
   height?: number;
   ariaLabel: string;
 }) {
@@ -32,7 +39,7 @@ export function TrendChart({
   const padBottom = 22;
   const H = height;
   const n = points.length;
-  const max = Math.max(1e-9, ...points.map((p) => Math.max(p.value, p.ref ?? 0)));
+  const max = Math.max(1e-9, ...points.map((p) => Math.max(p.value, p.ref ?? 0, p.other ?? 0)));
   const x = (i: number) => padX + (n === 1 ? (W - padX * 2) / 2 : (i / (n - 1)) * (W - padX * 2));
   const y = (v: number) => padTop + (1 - v / max) * (H - padTop - padBottom);
   const line = (get: (p: TrendPoint) => number | undefined) =>
@@ -69,6 +76,9 @@ export function TrendChart({
         {points.some((p) => p.ref !== undefined) && (
           <path d={line((p) => p.ref)} fill="none" stroke="var(--ink-3)" strokeWidth="1.5" strokeDasharray="4 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         )}
+        {points.some((p) => p.other !== undefined) && (
+          <path d={line((p) => p.other)} fill="none" stroke={otherColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        )}
         <path d={line((p) => p.value)} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         {[0, mid, n - 1].filter((v, i, a) => n > 0 && a.indexOf(v) === i).map((i) => (
           <text
@@ -87,6 +97,9 @@ export function TrendChart({
           <>
             <line x1={x(hover)} x2={x(hover)} y1={padTop - 4} y2={H - padBottom} stroke="var(--ink-3)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
             <circle cx={x(hover)} cy={y(points[hover].value)} r="4.5" fill={color} stroke="var(--surface)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            {points[hover].other !== undefined && (
+              <circle cx={x(hover)} cy={y(points[hover].other!)} r="4.5" fill={otherColor} stroke="var(--surface)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            )}
           </>
         )}
       </svg>
@@ -95,7 +108,14 @@ export function TrendChart({
           className="glass pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-field px-3 py-1.5 text-center"
           style={{ left: `clamp(48px, ${(x(hover) / W) * 100}%, calc(100% - 48px))` }}
         >
-          <div className="title-m tnum leading-tight">{format(hp.value)}</div>
+          {hp.other !== undefined && names ? (
+            <>
+              <div className="tnum text-sm leading-tight font-semibold" style={{ color }}>{names.mine}: {format(hp.value)}</div>
+              <div className="tnum text-sm leading-tight font-semibold text-ink-2">{names.other}: {format(hp.other)}</div>
+            </>
+          ) : (
+            <div className="title-m tnum leading-tight">{format(hp.value)}</div>
+          )}
           <div className="label text-ink-2">{hp.label}</div>
         </div>
       )}
