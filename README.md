@@ -24,7 +24,10 @@ El modo demo usa actividades y goals de ejemplo en memoria. En producción nunca
 
 1. **Strava**: crea una app en <https://www.strava.com/settings/api>. En *Authorization Callback Domain* pon el dominio
    (`localhost` para desarrollo). Copia Client ID y Client Secret a `.env.local`.
-   Una app nueva admite **un solo atleta** hasta que Strava aprueba el aumento de capacidad: solicítalo antes de compartirla.
+   Una app de nivel estándar admite **10 atletas conectados**; para más, Strava exige una revisión.
+   Límites: 200 lecturas cada 15 min y 2.000 al día (la app sincroniza como máximo cada 10 min por usuario).
+   El permiso que pide la app es `read,activity:read_all`; los tokens que muestra el panel de Strava solo tienen `read`
+   y no se usan: cada persona obtiene los suyos al iniciar sesión.
 2. **Supabase**: crea un proyecto y ejecuta `supabase/migrations/0001_init.sql` en el SQL editor. Copia la URL y la
    *service role key*. Las tablas tienen RLS activado y sin políticas: solo el servidor puede acceder.
 3. **Secretos**: `SESSION_SECRET` y `TOKEN_ENC_KEY` con `openssl rand -base64 32`.

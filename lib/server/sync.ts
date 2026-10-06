@@ -40,7 +40,7 @@ export interface ActivitiesResult {
 
 /**
  * Devuelve las actividades del atleta (últimos ~400 días). Sincroniza con Strava como máximo cada 10 minutos
- * para no agotar el límite de la API (100 peticiones / 15 min, 1000 / día).
+ * para no agotar el límite de la API (200 lecturas / 15 min, 2000 / día en nivel estándar).
  */
 export async function getActivities(athleteId: number, force = false): Promise<ActivitiesResult> {
   const today = todayLocal();
