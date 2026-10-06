@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { periodRange } from "@/lib/dates";
 import { goalSentence, inputToBase, inputUnitLabel, suggestTitle } from "@/lib/goal-copy";
 import { validateNewGoal } from "@/lib/goal-validation";
 import { useData } from "@/lib/client/data";
 import type { GoalMetric, GoalPeriod, NewGoal, Sport } from "@/lib/types";
 import { IconChevron } from "./icons";
+import { PeriodFields, type When } from "./period-fields";
 import { Sheet } from "./sheet";
 import { SportsPicker } from "./sports-picker";
 import { useToast } from "./toast";
-import { Button, Chip, ChipGroup, Field, inputClass } from "./ui";
+import { Button, Field, inputClass } from "./ui";
 
 const METRICS: { value: GoalMetric; title: string; hint: string }[] = [
   { value: "distance", title: "Distancia", hint: "Acumular kilómetros" },
@@ -28,13 +29,6 @@ const TEMPLATES: { label: string; metric: GoalMetric; sports: Sport[]; period: E
   { label: "7 días seguidos", metric: "streak", sports: ["run", "ride", "walk"], period: "month", target: 7 },
 ];
 
-const PERIODS: { value: GoalPeriod; label: string }[] = [
-  { value: "week", label: "Esta semana" },
-  { value: "month", label: "Este mes" },
-  { value: "year", label: "Este año" },
-  { value: "custom", label: "Personalizado" },
-];
-
 export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { settings, today, createGoal } = useData();
   const toast = useToast();
@@ -42,9 +36,7 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
   const [metric, setMetric] = useState<GoalMetric>("distance");
   const [sports, setSports] = useState<Sport[]>(["run"]);
   const [targetText, setTargetText] = useState("");
-  const [period, setPeriod] = useState<GoalPeriod>("month");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [when, setWhen] = useState<When>({ period: "month", startDate: "", endDate: "" });
   const [title, setTitle] = useState("");
   const [titleTouched, setTitleTouched] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -58,20 +50,17 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
     setMetric("distance");
     setSports(["run"]);
     setTargetText("");
-    setPeriod("month");
-    setCustomStart(today);
-    setCustomEnd(today);
+    setWhen({ period: "month", ...periodRange("month", today, settings.weekStart) });
     setTitle("");
     setTitleTouched(false);
     setError(null);
     /* eslint-enable react-hooks/set-state-in-effect */
+    // Solo debe reiniciarse al abrir o al cambiar el día, no al cambiar ajustes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, today]);
 
   const target = Number(targetText.replace(",", "."));
-  const range = useMemo(
-    () => (period === "custom" ? { startDate: customStart, endDate: customEnd } : periodRange(period, today, settings.weekStart)),
-    [period, customStart, customEnd, today, settings.weekStart],
-  );
+  const { period, ...range } = when;
   const base = Number.isFinite(target) ? inputToBase(metric, target, settings.units) : NaN;
   const draft: NewGoal = {
     title: title.trim(),
@@ -88,7 +77,7 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
   const applyTemplate = (t: (typeof TEMPLATES)[number]) => {
     setMetric(t.metric);
     setSports(t.sports);
-    setPeriod(t.period);
+    setWhen({ period: t.period, ...periodRange(t.period, today, settings.weekStart) });
     setTargetText(String(t.target));
     setTitleTouched(false);
     setStep(3);
@@ -193,26 +182,7 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
 
       {step === 3 && (
         <div className="space-y-6">
-          <div>
-            <p className="label mb-2 text-ink-2">Periodo</p>
-            <ChipGroup label="Periodo">
-              {PERIODS.map((p) => (
-                <Chip key={p.value} selected={period === p.value} onClick={() => setPeriod(p.value)}>
-                  {p.label}
-                </Chip>
-              ))}
-            </ChipGroup>
-          </div>
-          {period === "custom" && (
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Desde">
-                <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={inputClass} />
-              </Field>
-              <Field label="Hasta">
-                <input type="date" value={customEnd} min={customStart} onChange={(e) => setCustomEnd(e.target.value)} className={inputClass} />
-              </Field>
-            </div>
-          )}
+          <PeriodFields value={when} onChange={setWhen} />
           <Field label="Título">
             <input
               value={shownTitle}

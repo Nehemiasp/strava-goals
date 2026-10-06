@@ -17,7 +17,7 @@ interface DataState {
   refreshing: boolean;
   refresh: (force?: boolean) => Promise<void>;
   createGoal: (g: NewGoal) => Promise<Goal>;
-  updateGoal: (id: string, patch: Partial<Pick<Goal, "title" | "target" | "status">>) => Promise<void>;
+  updateGoal: (id: string, patch: Partial<Pick<Goal, "title" | "target" | "status" | "sports" | "period" | "startDate" | "endDate">>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   setSettings: (patch: Partial<Settings>) => void;
 }

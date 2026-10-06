@@ -208,3 +208,53 @@ test("Coach: elegir deportes cambia el contenido y respeta ajustes antiguos", as
   await walk.click();
   await expect(preview).toContainText("Caminar (km)");
 });
+
+test("Goals: editar fechas, deportes y objetivo de un goal", async ({ page }) => {
+  await login(page);
+  await page.getByRole("link", { name: "Goals" }).click();
+  await page.getByRole("link", { name: /100 km corriendo este mes/ }).click();
+  await expect(page).toHaveURL(/\/goals\/[^/]+$/);
+  await page.getByRole("button", { name: "Editar" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Editar goal" });
+  await expect(dialog.getByRole("button", { name: "Sin cambios" })).toBeDisabled();
+  // Muestra las fechas actuales y deja cambiarlas.
+  await dialog.getByLabel("Desde").fill("2026-10-05");
+  await dialog.getByLabel("Hasta").fill("2026-12-15");
+  await dialog.getByRole("checkbox", { name: "Caminar" }).click();
+  await dialog.getByLabel(/Objetivo en km/).fill("250");
+  await dialog.getByRole("button", { name: /Usar el título sugerido/ }).click();
+  await expect(dialog.getByLabel("Título")).toHaveValue("250 km corriendo y caminando");
+
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("heading", { level: 1, name: "250 km corriendo y caminando" })).toBeVisible();
+  await expect(page.getByText(/5 oct – 15 dic/)).toBeVisible();
+  await expect(page.getByText("Correr y Caminar").first()).toBeVisible();
+});
+
+test("Goals: el editor avisa si las fechas no son válidas", async ({ page }) => {
+  await login(page);
+  await page.getByRole("link", { name: "Goals" }).click();
+  await page.getByRole("link", { name: /3 salidas por semana/ }).click();
+  await page.getByRole("button", { name: "Editar" }).click();
+  const dialog = page.getByRole("dialog", { name: "Editar goal" });
+  await dialog.getByLabel("Desde").fill("2026-12-20");
+  await dialog.getByLabel("Hasta").fill("2026-12-01");
+  await expect(dialog.getByRole("alert")).toContainText("posterior");
+  await expect(dialog.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
+});
+
+test("Goals: un atajo de periodo recalcula las fechas", async ({ page }) => {
+  await login(page);
+  await page.getByRole("link", { name: "Goals" }).click();
+  await page.getByRole("link", { name: /1\.500 km en bici este año/ }).click();
+  await page.getByRole("button", { name: "Editar" }).click();
+  const dialog = page.getByRole("dialog", { name: "Editar goal" });
+  await dialog.getByRole("radio", { name: "Este mes" }).click();
+  await expect(dialog.getByLabel("Desde")).toBeHidden(); // los atajos ocultan los campos de fecha
+  await dialog.getByRole("radio", { name: "Personalizado" }).click();
+  await expect(dialog.getByLabel("Desde")).toHaveValue(/-01$/); // primer día del mes
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(dialog).toBeHidden();
+});

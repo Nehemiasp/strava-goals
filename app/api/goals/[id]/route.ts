@@ -1,4 +1,4 @@
-import { validateGoalPatch } from "@/lib/goal-validation";
+import { applyGoalPatch, validateGoalPatch } from "@/lib/goal-validation";
 import { fail, json, requireAthlete, sameOrigin } from "@/lib/server/http";
 import { getStore } from "@/lib/server/store";
 
@@ -9,7 +9,13 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/goals/[id]">) 
   const { id } = await ctx.params;
   const parsed = validateGoalPatch(await req.json().catch(() => null));
   if (!parsed.ok) return fail(400, parsed.error);
-  const goal = await (await getStore()).updateGoal(athleteId, id, parsed.value);
+  const store = await getStore();
+  const existing = (await store.listGoals(athleteId)).find((g) => g.id === id);
+  if (!existing) return fail(404, "Goal no encontrado");
+  // Las reglas entre campos (fechas, racha, objetivo máximo) se validan sobre el goal ya combinado.
+  const applied = applyGoalPatch(existing, parsed.value);
+  if (!applied.ok) return fail(400, applied.error);
+  const goal = await store.updateGoal(athleteId, id, applied.value);
   return goal ? json({ goal }) : fail(404, "Goal no encontrado");
 }
 

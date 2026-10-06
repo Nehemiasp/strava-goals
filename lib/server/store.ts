@@ -13,7 +13,7 @@ export interface AthleteRow {
   syncedAt: string | null;
 }
 
-export type GoalPatch = Partial<Pick<Goal, "title" | "target" | "status" | "startDate" | "endDate">>;
+export type GoalPatch = Partial<Pick<Goal, "title" | "target" | "status" | "sports" | "period" | "startDate" | "endDate">>;
 
 export interface Store {
   getAthlete(id: number): Promise<AthleteRow | null>;

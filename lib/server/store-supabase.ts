@@ -133,6 +133,8 @@ export function createSupabaseStore(): Store {
       if (patch.title !== undefined) update.title = patch.title;
       if (patch.target !== undefined) update.target = patch.target;
       if (patch.status !== undefined) update.status = patch.status;
+      if (patch.sports !== undefined) update.sports = patch.sports;
+      if (patch.period !== undefined) update.period = patch.period;
       if (patch.startDate !== undefined) update.start_date = patch.startDate;
       if (patch.endDate !== undefined) update.end_date = patch.endDate;
       const { data, error } = await db

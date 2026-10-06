@@ -471,3 +471,13 @@ Cuando apruebes o ajustes estas decisiones, empiezo por el **Paso 1** (andamiaje
 | Deportes de un goal | Ya no es una opción única: es un **conjunto** (selección múltiple, mínimo uno, no se puede dejar vacío). Los goals antiguos «Ambos» pasan a {Correr, Bici} y siguen sin contar caminatas. |
 | Coach | El selector de deportes del brief también es múltiple; el resumen semanal añade columna Caminar solo si el deporte está incluido. |
 | Hoy | La leyenda semanal y la tira de 7 días incluyen un tercer color. |
+
+### 15.2 Edición de goals
+
+| Tema | Decisión |
+|---|---|
+| Qué se puede editar | Título, objetivo, **deportes**, **periodo y fechas**. El tipo de medida (distancia, tiempo, desnivel, frecuencia, racha) queda fijo porque el objetivo está en su unidad; para medir otra cosa se crea un goal nuevo. |
+| Fechas | Se muestran las fechas exactas (modo «Personalizado»). Los atajos «Esta semana / Este mes / Este año» las recalculan desde hoy. Mover una fecha pasa el periodo a «Personalizado». |
+| Título | No se pisa solo: si cambian objetivo o deportes aparece «Usar el título sugerido: …». |
+| Validación | El servidor valida el goal **ya combinado** con las mismas reglas que al crear (periodo ≤ 1 año, fin ≥ inicio, racha ≤ días del periodo). Las fechas de inicio y fin se envían siempre juntas. |
+| Guardado | Solo se envía lo que cambió; el botón dice «Sin cambios» y está desactivado si no hay nada que guardar. |
