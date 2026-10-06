@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { use, useMemo, useState } from "react";
 import { ActivityList, ActivityRow } from "@/components/activity-row";
 import { EditGoalSheet } from "@/components/edit-goal-sheet";
-import { statusColor } from "@/components/goal-card";
-import { IconBack, IconBike, IconRun } from "@/components/icons";
+import { SportTag, statusColor } from "@/components/goal-card";
+import { IconBack } from "@/components/icons";
 import { PaceTrack } from "@/components/pace-track";
 import { useScreenGate } from "@/components/screen-states";
 import { useToast } from "@/components/toast";
@@ -83,11 +83,12 @@ export default function GoalDetailPage({ params }: PageProps<"/goals/[id]">) {
       <div className="enter space-y-8 pt-2">
         <header>
           <h1 className="title-l">{goal.title}</h1>
-          <p className="body-s mt-1 flex items-center gap-1.5 text-ink-2">
-            {goal.sport !== "ride" && <IconRun size={14} strokeWidth={1.75} aria-hidden />}
-            {goal.sport !== "run" && <IconBike size={14} strokeWidth={1.75} aria-hidden />}
-            {goal.sport === "run" ? "Correr" : goal.sport === "ride" ? "Bici" : "Correr y bici"} · {shortDate(goal.startDate)} – {shortDate(goal.endDate)}
-            {archived && " · Archivado"}
+          <p className="body-s mt-1 flex flex-wrap items-center gap-x-1.5 text-ink-2">
+            <SportTag sports={goal.sports} />
+            <span>
+              · {shortDate(goal.startDate)} – {shortDate(goal.endDate)}
+              {archived && " · Archivado"}
+            </span>
           </p>
         </header>
 

@@ -13,6 +13,7 @@
   --on-fern: #ffffff;
   --run: #c8421c;
   --ride: #1f68c9;
+  --walk: #9b3f86;
   --amber: #9a6200;
   --danger: #c0392b;
 
@@ -36,6 +37,7 @@
     --on-fern: #04150f;
     --run: #ff8460;
     --ride: #6faeff;
+    --walk: #e58bd0;
     --amber: #f2b84b;
     --danger: #ff7a6e;
     --glass-alpha: 72%;
@@ -58,6 +60,7 @@
   --on-fern: #04150f;
   --run: #ff8460;
   --ride: #6faeff;
+  --walk: #e58bd0;
   --amber: #f2b84b;
   --danger: #ff7a6e;
   --glass-alpha: 72%;
@@ -78,6 +81,7 @@
   --color-on-fern: var(--on-fern);
   --color-run: var(--run);
   --color-ride: var(--ride);
+  --color-walk: var(--walk);
   --color-amber: var(--amber);
   --color-danger: var(--danger);
 

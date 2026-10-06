@@ -69,6 +69,7 @@ Los neutros claros tienen un leve tono cálido (no gris azulado puro) para aleja
 | `--on-fern` | `#FFFFFF` | `#04150F` | Texto sobre relleno de acento | 5,3 / 10,6 |
 | `--run` | `#C8421C` | `#FF8460` | Correr | 4,9 / 7,4 |
 | `--ride` | `#1F68C9` | `#6FAEFF` | Bicicleta | 5,4 / 7,8 |
+| `--walk` | `#9B3F86` | `#E58BD0` | Caminar (caminata y senderismo) | 6,1 / 7,6 (sobre `surface`; ≥ 5,1 sobre `surface-2`) |
 | `--amber` | `#9A6200` | `#F2B84B` | Atrasado respecto al ritmo | 5,1 / 9,9 |
 | `--danger` | `#C0392B` | `#FF7A6E` | Error, borrar | 5,4 / 7,0 |
 
@@ -458,3 +459,15 @@ Cuando apruebes o ajustes estas decisiones, empiezo por el **Paso 1** (andamiaje
 | Cifras | Distancias de actividad con un decimal fijo (`7,0 km`); objetivos recortados (`100 km`). |
 | Botón de Strava | Provisional (naranja de marca + texto). **Pendiente** sustituirlo por el asset oficial antes de publicar. |
 | Fuera de alcance por ahora | Modo sin conexión con datos (el service worker solo cachea estáticos y muestra una página offline), notificaciones y webhooks de Strava. |
+
+### 15.1 Caminar como tercer deporte
+
+| Tema | Decisión |
+|---|---|
+| Deportes | `Correr`, `Bici` y **`Caminar`**, tres deportes aparte. En Strava, `Walk` y `Hike` cuentan como Caminar. |
+| Color e icono | Ciruela (`--walk`) con el icono de persona de pie; correr conserva las huellas y bici la bicicleta. Como en los otros dos, el color nunca es la única señal: siempre va con icono y etiqueta. |
+| Filtro de Actividad | `Todo · Correr · Bici · Caminar`. Con cuatro opciones **se quitan los iconos** del control segmentado para que quepa a 360 px. |
+| Ritmo | Caminar muestra **ritmo (min/km)**, como Strava, igual que correr; la bici muestra velocidad. |
+| Deportes de un goal | Ya no es una opción única: es un **conjunto** (selección múltiple, mínimo uno, no se puede dejar vacío). Los goals antiguos «Ambos» pasan a {Correr, Bici} y siguen sin contar caminatas. |
+| Coach | El selector de deportes del brief también es múltiple; el resumen semanal añade columna Caminar solo si el deporte está incluido. |
+| Hoy | La leyenda semanal y la tira de 7 días incluyen un tercer color. |

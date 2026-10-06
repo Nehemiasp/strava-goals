@@ -4,8 +4,8 @@ App web móvil (PWA) para iOS y Android que se conecta a Strava y permite admini
 El diseño está en [`DISEÑO.md`](./DISEÑO.md).
 
 - **Hoy**: semana actual, goal más cercano, últimas salidas y tendencia de 8 semanas.
-- **Actividad**: últimas 10 salidas con filtro Todo / Correr / Bici.
-- **Goals**: distancia, tiempo, desnivel, frecuencia o racha, con ritmo esperado y proyección.
+- **Actividad**: últimas 10 salidas con filtro Todo / Correr / Bici / Caminar (caminata y senderismo de Strava).
+- **Goals**: distancia, tiempo, desnivel, frecuencia o racha, con ritmo esperado y proyección. Cada goal elige qué deportes cuentan (cualquier combinación de correr, bici y caminar).
 - **Coach**: exporta tus datos (Markdown/JSON) para llevarlos a la IA que prefieras. La app no llama a ninguna IA.
 
 Stack: Next.js 16 (App Router) · TypeScript · Tailwind v4 · Supabase (Postgres) · Vercel.
@@ -28,7 +28,8 @@ El modo demo usa actividades y goals de ejemplo en memoria. En producción nunca
    Límites: 200 lecturas cada 15 min y 2.000 al día (la app sincroniza como máximo cada 10 min por usuario).
    El permiso que pide la app es `read,activity:read_all`; los tokens que muestra el panel de Strava solo tienen `read`
    y no se usan: cada persona obtiene los suyos al iniciar sesión.
-2. **Supabase**: crea un proyecto y ejecuta `supabase/migrations/0001_init.sql` en el SQL editor. Copia la URL y la
+2. **Supabase**: crea un proyecto y ejecuta, **en orden**, `supabase/migrations/0001_init.sql` y `0002_walk.sql` en el SQL editor.
+   La 0002 añade Caminar y fuerza una resincronización completa para traer las caminatas ya existentes. Copia la URL y la
    *service role key*. Las tablas tienen RLS activado y sin políticas: solo el servidor puede acceder.
 3. **Secretos**: `SESSION_SECRET` y `TOKEN_ENC_KEY` con `openssl rand -base64 32`.
 4. **Marca de Strava**: sustituye el botón de `app/connect/page.tsx` por el asset oficial "Connect with Strava"

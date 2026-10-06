@@ -22,7 +22,7 @@ const goal: Goal = {
   id: "g",
   title: "100 km en octubre",
   metric: "distance",
-  sport: "run",
+  sports: ["run"],
   target: 100_000,
   period: "month",
   startDate: "2026-10-01",
@@ -42,7 +42,7 @@ describe("buildBrief", () => {
   });
 
   it("filtra por rango y deporte", () => {
-    const b = buildBrief(acts, [], { ...DEFAULT_BRIEF_OPTIONS, rangeDays: 30, sport: "run" }, DEFAULT_SETTINGS, "2026-10-06");
+    const b = buildBrief(acts, [], { ...DEFAULT_BRIEF_OPTIONS, rangeDays: 30, sports: ["run"] }, DEFAULT_SETTINGS, "2026-10-06");
     expect(b.activityCount).toBe(1);
   });
 
@@ -90,5 +90,47 @@ describe("weeklySummary", () => {
     const w = weeklySummary([act(1, "2026-10-04"), act(2, "2026-10-05")], "sun");
     expect(w).toHaveLength(1);
     expect(w[0].weekStart).toBe("2026-10-04");
+  });
+});
+
+import { migrateBriefOptions } from "@/lib/export-brief";
+import { formatPaceOrSpeed, sportsLabel } from "@/lib/format";
+
+describe("caminar en el brief", () => {
+  const walk = act(9, "2026-10-04", { sport: "walk", sportType: "Walk", distance: 5_000, avgSpeed: 1.4, avgHr: 110 });
+  it("incluye columna y filas de Caminar solo si el deporte está seleccionado", () => {
+    const all = buildBrief([...acts, walk], [], DEFAULT_BRIEF_OPTIONS, DEFAULT_SETTINGS, "2026-10-06");
+    expect(all.text).toContain("Caminar (km)");
+    expect(all.text).toMatch(/\| 4 oct \| Caminar \|/);
+    const only = buildBrief([...acts, walk], [], { ...DEFAULT_BRIEF_OPTIONS, sports: ["run", "ride"] }, DEFAULT_SETTINGS, "2026-10-06");
+    expect(only.text).not.toContain("Caminar");
+  });
+  it("el JSON lleva `caminar` en el resumen semanal", () => {
+    const b = buildBrief([walk], [], { ...DEFAULT_BRIEF_OPTIONS, format: "json", sports: ["walk"] }, DEFAULT_SETTINGS, "2026-10-06");
+    const json = JSON.parse(b.text);
+    expect(json.resumen_semanal[0].caminar).toBe("5,0 km");
+    expect(json.resumen_semanal[0].correr).toBeUndefined();
+    expect(json.periodo.deportes).toEqual(["Caminar"]);
+  });
+  it("caminar usa ritmo (min/km) como Strava, la bici velocidad", () => {
+    expect(formatPaceOrSpeed("walk", 1.4, "metric")).toBe("11:54 /km");
+    expect(formatPaceOrSpeed("ride", 7.5, "metric")).toBe("27 km/h");
+  });
+  it("une los nombres de deportes", () => {
+    expect(sportsLabel(["run"])).toBe("Correr");
+    expect(sportsLabel(["run", "walk"])).toBe("Correr y Caminar");
+    expect(sportsLabel(["run", "ride", "walk"])).toBe("Correr, Bici y Caminar");
+  });
+});
+
+describe("migrateBriefOptions (valores guardados por versiones anteriores)", () => {
+  it("convierte el `sport` antiguo", () => {
+    expect(migrateBriefOptions({ sport: "run", rangeDays: 30 })).toEqual({ rangeDays: 30, sports: ["run"] });
+    expect(migrateBriefOptions({ sport: "all" })).toEqual({ sports: ["run", "ride"] });
+  });
+  it("respeta `sports` actual y descarta basura", () => {
+    expect(migrateBriefOptions({ sports: ["walk", "run"] })).toEqual({ sports: ["run", "walk"] });
+    expect(migrateBriefOptions({ sports: ["swim"], sport: "ride" })).toEqual({ sports: ["ride"] });
+    expect(migrateBriefOptions(null)).toEqual({});
   });
 });

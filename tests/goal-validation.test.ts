@@ -4,7 +4,7 @@ import { validateGoalPatch, validateNewGoal } from "@/lib/goal-validation";
 const ok = {
   title: "  100 km en octubre ",
   metric: "distance",
-  sport: "run",
+  sports: ["run"],
   target: 100_000,
   period: "month",
   startDate: "2026-10-01",
@@ -41,5 +41,22 @@ describe("validateGoalPatch", () => {
   it("rechaza vacío y estados inválidos", () => {
     expect(validateGoalPatch({}).ok).toBe(false);
     expect(validateGoalPatch({ status: "x" }).ok).toBe(false);
+  });
+});
+
+import { validateSports } from "@/lib/goal-validation";
+
+describe("validateSports", () => {
+  it("acepta cualquier combinación y la normaliza al orden canónico", () => {
+    expect(validateSports(["walk", "run"])).toEqual({ ok: true, value: ["run", "walk"] });
+    expect(validateSports(["walk"])).toEqual({ ok: true, value: ["walk"] });
+    expect(validateSports(["ride", "walk", "run"])).toEqual({ ok: true, value: ["run", "ride", "walk"] });
+  });
+  it.each([[[]], [undefined], ["run"], [["swim"]], [["run", "run"]], [[1]]])("rechaza %j", (input) => {
+    expect(validateSports(input).ok).toBe(false);
+  });
+  it("validateNewGoal rechaza el campo antiguo `sport`", () => {
+    const r = validateNewGoal({ ...ok, sports: undefined, sport: "run" });
+    expect(r.ok).toBe(false);
   });
 });

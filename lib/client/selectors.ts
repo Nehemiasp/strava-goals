@@ -1,7 +1,7 @@
 import { addDays, startOfWeek } from "../dates";
 import { shortDate } from "../format";
 import { computeProgress, type Progress } from "../goals-progress";
-import type { Activity, Goal, Settings, SportFilter } from "../types";
+import type { Activity, Goal, Settings, Sport, SportFilter } from "../types";
 
 export interface GoalWithProgress {
   goal: Goal;
@@ -27,11 +27,12 @@ export function latest(activities: Activity[], filter: SportFilter, n = 10): Act
 }
 
 export function thisWeek(activities: Activity[], today: string, weekStart: Settings["weekStart"]) {
-  if (!today) return { list: [], count: 0, run: 0, ride: 0, total: 0 };
+  if (!today) return { list: [], count: 0, run: 0, ride: 0, walk: 0, total: 0 };
   const start = startOfWeek(today, weekStart);
   const list = activities.filter((a) => a.date >= start && a.date <= today);
-  const sum = (sport: "run" | "ride") => list.filter((a) => a.sport === sport).reduce((s, a) => s + a.distance, 0);
-  return { list, count: list.length, run: sum("run"), ride: sum("ride"), total: sum("run") + sum("ride") };
+  const sum = (sport: Sport) => list.filter((a) => a.sport === sport).reduce((s, a) => s + a.distance, 0);
+  const [run, ride, walk] = [sum("run"), sum("ride"), sum("walk")];
+  return { list, count: list.length, run, ride, walk, total: run + ride + walk };
 }
 
 /** Distancia total por semana, de la más antigua a la actual. */

@@ -1,12 +1,28 @@
 import { diffDays } from "./dates";
 import { daysLabel, displayToMeters, formatDelta, formatMetricInline, longDate, shortDate } from "./format";
 import type { Progress } from "./goals-progress";
-import type { Goal, GoalMetric, GoalSport, Settings } from "./types";
+import type { Goal, GoalMetric, Settings, Sport } from "./types";
 
 type Units = Settings["units"];
 
-const sportAdverb = (s: GoalSport) => (s === "run" ? "corriendo" : s === "ride" ? "en bici" : "");
-const sportInfinitive = (s: GoalSport) => (s === "run" ? "Correr" : s === "ride" ? "Rodar" : "Moverte");
+const ADVERB: Record<Sport, string> = { run: "corriendo", ride: "en bici", walk: "caminando" };
+const INFINITIVE: Record<Sport, string> = { run: "correr", ride: "rodar", walk: "caminar" };
+const ORDER: Sport[] = ["run", "ride", "walk"];
+const ordered = (sports: readonly Sport[]) => ORDER.filter((s) => sports.includes(s));
+const joinY = (parts: string[]) => (parts.length <= 1 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} y ${parts[parts.length - 1]}`);
+const isAll = (sports: readonly Sport[]) => ORDER.every((s) => sports.includes(s));
+
+/** "corriendo", "corriendo y en bici"… Vacío si cuentan los tres deportes. */
+function sportAdverb(sports: readonly Sport[]): string {
+  return isAll(sports) ? "" : joinY(ordered(sports).map((s) => ADVERB[s]));
+}
+
+/** "Correr", "Correr y caminar", "Moverte" (los tres). */
+function sportInfinitive(sports: readonly Sport[]): string {
+  if (isAll(sports)) return "Moverte";
+  const text = joinY(ordered(sports).map((s) => INFINITIVE[s]));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 /** Frase corta de estado para tarjetas: "Vas 6,2 km por delante". */
 export function statusText(goal: Goal, p: Progress, units: Units): string {
@@ -67,30 +83,36 @@ const PERIOD_PHRASE: Record<Goal["period"], string> = {
 
 /** Título sugerido: "100 km corriendo este mes". */
 export function suggestTitle(
-  g: Pick<Goal, "metric" | "sport" | "target" | "period">,
+  g: Pick<Goal, "metric" | "sports" | "target" | "period">,
   units: Units,
 ): string {
   const value = formatMetricInline(g.metric, g.target, units);
   if (g.metric === "count") {
     const per = g.period === "week" ? " por semana" : g.period === "month" ? " al mes" : g.period === "year" ? " al año" : "";
-    return [`${value}${per}`, sportAdverb(g.sport)].filter(Boolean).join(" ");
+    return [`${value}${per}`, sportAdverb(g.sports)].filter(Boolean).join(" ");
   }
-  return [METRIC_PHRASE[g.metric](value), sportAdverb(g.sport), PERIOD_PHRASE[g.period]].filter(Boolean).join(" ");
+  return [METRIC_PHRASE[g.metric](value), sportAdverb(g.sports), PERIOD_PHRASE[g.period]].filter(Boolean).join(" ");
 }
 
 /** Resumen antes de guardar: "Correr 100 km entre el 1 y el 31 de octubre". */
-export function goalSentence(g: Pick<Goal, "metric" | "sport" | "target" | "startDate" | "endDate">, units: Units): string {
+export function goalSentence(g: Pick<Goal, "metric" | "sports" | "target" | "startDate" | "endDate">, units: Units): string {
   const value = formatMetricInline(g.metric, g.target, units);
-  const what =
-    g.metric === "count"
-      ? `${sportInfinitive(g.sport) === "Moverte" ? "Salir" : `Salir a ${g.sport === "run" ? "correr" : "rodar"}`} ${value}`
-      : g.metric === "streak"
-        ? `Entrenar ${value}`
-        : g.metric === "time"
-          ? `${sportInfinitive(g.sport)} ${value}`
-          : g.metric === "elevation"
-            ? `Acumular ${value} de desnivel${g.sport === "both" ? "" : g.sport === "run" ? " corriendo" : " en bici"}`
-            : `${sportInfinitive(g.sport)} ${value}`;
+  const adverb = sportAdverb(g.sports);
+  const withSport = (text: string) => (adverb ? `${text} ${adverb}` : text);
+  let what: string;
+  switch (g.metric) {
+    case "count":
+      what = withSport(`Hacer ${value}`);
+      break;
+    case "streak":
+      what = withSport(`Entrenar ${value}`);
+      break;
+    case "elevation":
+      what = withSport(`Acumular ${value} de desnivel`);
+      break;
+    default:
+      what = `${sportInfinitive(g.sports)} ${value}`;
+  }
   return `${what} entre el ${longDate(g.startDate)} y el ${longDate(g.endDate)}`;
 }
 

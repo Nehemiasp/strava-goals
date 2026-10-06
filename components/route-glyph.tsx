@@ -1,8 +1,8 @@
 import { polylineToPath } from "@/lib/polyline";
 import type { Sport } from "@/lib/types";
-import { IconBike, IconRun } from "./icons";
+import { IconBike, IconRun, IconWalk } from "./icons";
 
-const COLOR: Record<Sport, string> = { run: "var(--run)", ride: "var(--ride)" };
+const COLOR: Record<Sport, string> = { run: "var(--run)", ride: "var(--ride)", walk: "var(--walk)" };
 
 /** Silueta del recorrido a partir de la polilínea de Strava. Sin polilínea muestra el icono del deporte. */
 export function RouteGlyph({ polyline, sport, show = true }: { polyline: string | null; sport: Sport; show?: boolean }) {
@@ -19,8 +19,10 @@ export function RouteGlyph({ polyline, sport, show = true }: { polyline: string 
         </svg>
       ) : sport === "run" ? (
         <IconRun size={22} strokeWidth={1.75} />
-      ) : (
+      ) : sport === "ride" ? (
         <IconBike size={22} strokeWidth={1.75} />
+      ) : (
+        <IconWalk size={22} strokeWidth={1.75} />
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { SegmentedControl } from "@/components/segmented";
 import { useScreenGate } from "@/components/screen-states";
 import { useToast } from "@/components/toast";
 import { TopBar } from "@/components/top-bar";
+import { SportsPicker } from "@/components/sports-picker";
 import { Button, Chip, ChipGroup, Toggle } from "@/components/ui";
 import { useData } from "@/lib/client/data";
 import { usePersisted } from "@/lib/client/use-persisted";
@@ -15,10 +16,10 @@ import {
   DEFAULT_BRIEF_OPTIONS,
   DEFAULT_PROMPT,
   MAX_DEEPLINK_CHARS,
+  migrateBriefOptions,
   type BriefFormat,
   type BriefOptions,
 } from "@/lib/export-brief";
-import type { SportFilter } from "@/lib/types";
 
 const nf = new Intl.NumberFormat("es");
 
@@ -54,7 +55,7 @@ export default function CoachPage() {
   const gate = useScreenGate();
   const { activities, goals, settings, today } = useData();
   const toast = useToast();
-  const [opts, setOpts] = usePersisted<BriefOptions>("sg:brief", DEFAULT_BRIEF_OPTIONS);
+  const [opts, setOpts] = usePersisted<BriefOptions>("sg:brief", DEFAULT_BRIEF_OPTIONS, migrateBriefOptions);
   const [editingPrompt, setEditingPrompt] = useState(false);
   const set = <K extends keyof BriefOptions>(k: K, v: BriefOptions[K]) => setOpts((p) => ({ ...p, [k]: v }));
 
@@ -121,14 +122,8 @@ export default function CoachPage() {
                 ))}
               </ChipGroup>
             </Group>
-            <Group label="Deporte">
-              <ChipGroup label="Deporte">
-                {([["all", "Ambos"], ["run", "Correr"], ["ride", "Bici"]] as [SportFilter, string][]).map(([v, l]) => (
-                  <Chip key={v} selected={opts.sport === v} onClick={() => set("sport", v)}>
-                    {l}
-                  </Chip>
-                ))}
-              </ChipGroup>
+            <Group label="Deportes">
+              <SportsPicker value={opts.sports} onChange={(v) => set("sports", v)} />
             </Group>
             <div className="rounded-card bg-surface px-4 py-2">
               <Toggle checked={opts.includeGoals} onChange={(v) => set("includeGoals", v)} label="Goals activos" />

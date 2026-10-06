@@ -3,10 +3,27 @@ import { statusText, timeLeftText } from "@/lib/goal-copy";
 import { formatMetric } from "@/lib/format";
 import type { Progress } from "@/lib/goals-progress";
 import type { Goal, Settings } from "@/lib/types";
-import { IconBike, IconRun } from "./icons";
+import { sportsLabel } from "@/lib/format";
+import type { Sport } from "@/lib/types";
+import { IconBike, IconRun, IconWalk } from "./icons";
 import { PaceTrack, stateColor } from "./pace-track";
 
-const SPORT_TAG = { run: "Correr", ride: "Bici", both: "Correr y bici" } as const;
+const SPORT_ICON = { run: IconRun, ride: IconBike, walk: IconWalk } as const;
+
+/** Iconos + nombres de los deportes de un goal: "Correr y Caminar". */
+export function SportTag({ sports, className = "" }: { sports: readonly Sport[]; className?: string }) {
+  return (
+    <span className={`flex items-center gap-1.5 ${className}`}>
+      <span className="flex items-center gap-0.5" aria-hidden>
+        {(["run", "ride", "walk"] as const).filter((s) => sports.includes(s)).map((s) => {
+          const Icon = SPORT_ICON[s];
+          return <Icon key={s} size={14} strokeWidth={1.75} />;
+        })}
+      </span>
+      {sportsLabel(sports)}
+    </span>
+  );
+}
 
 export function statusColor(state: Progress["state"]): string {
   return state === "expired" || state === "upcoming" ? "var(--ink-2)" : stateColor(state);
@@ -25,11 +42,7 @@ export function GoalCard({ goal, progress, settings, today }: { goal: Goal; prog
     >
       <div className="flex items-start justify-between gap-3">
         <h3 className="title-m min-w-0">{goal.title}</h3>
-        <span className="label mt-1 flex shrink-0 items-center gap-1 text-ink-3">
-          {goal.sport !== "ride" && <IconRun size={14} strokeWidth={1.75} aria-hidden />}
-          {goal.sport !== "run" && <IconBike size={14} strokeWidth={1.75} aria-hidden />}
-          {SPORT_TAG[goal.sport]}
-        </span>
+        <SportTag sports={goal.sports} className="label mt-1 max-w-[40%] shrink-0 flex-wrap justify-end text-right text-ink-3" />
       </div>
       <div className="mt-3 flex items-baseline gap-1.5">
         <span className="display-l tnum">{cur.value}</span>

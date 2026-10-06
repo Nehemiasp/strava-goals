@@ -65,15 +65,19 @@ export default function HoyPage() {
                 </div>
               </div>
               <WeekStrip activities={activities} today={today} weekStart={settings.weekStart} />
-              <div className="flex gap-5 body-s text-ink-2">
-                <span className="flex items-center gap-2">
-                  <span aria-hidden className="h-2 w-2 rounded-full bg-run" />
-                  Correr <span className="tnum font-medium text-ink">{formatDistance(week.run, units)}</span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <span aria-hidden className="h-2 w-2 rounded-full bg-ride" />
-                  Bici <span className="tnum font-medium text-ink">{formatDistance(week.ride, units)}</span>
-                </span>
+              <div className="body-s flex flex-wrap gap-x-5 gap-y-1 text-ink-2">
+                {(
+                  [
+                    ["Correr", "bg-run", week.run],
+                    ["Bici", "bg-ride", week.ride],
+                    ["Caminar", "bg-walk", week.walk],
+                  ] as const
+                ).map(([label, dot, meters]) => (
+                  <span key={label} className="flex items-center gap-2">
+                    <span aria-hidden className={`h-2 w-2 rounded-full ${dot}`} />
+                    {label} <span className="tnum font-medium text-ink">{formatDistance(meters, units)}</span>
+                  </span>
+                ))}
               </div>
             </section>
 

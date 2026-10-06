@@ -1,4 +1,5 @@
-export type Sport = "run" | "ride";
+export type Sport = "run" | "ride" | "walk";
+export const ALL_SPORTS: readonly Sport[] = ["run", "ride", "walk"];
 export type SportFilter = Sport | "all";
 
 /** Actividad reducida a lo que la app necesita. Unidades base: metros, segundos, m/s. */
@@ -20,7 +21,6 @@ export interface Activity {
 }
 
 export type GoalMetric = "distance" | "time" | "elevation" | "count" | "streak";
-export type GoalSport = Sport | "both";
 export type GoalPeriod = "week" | "month" | "year" | "custom";
 export type GoalStatus = "active" | "archived";
 
@@ -29,7 +29,8 @@ export interface Goal {
   id: string;
   title: string;
   metric: GoalMetric;
-  sport: GoalSport;
+  /** Deportes que cuentan para el goal: no vacío, sin repetidos. */
+  sports: Sport[];
   target: number;
   period: GoalPeriod;
   /** Inclusive, `YYYY-MM-DD`. */

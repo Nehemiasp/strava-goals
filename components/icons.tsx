@@ -11,6 +11,7 @@ export {
   Footprints as IconRun,
   House as IconHome,
   MessageSquareText as IconCoach,
+  PersonStanding as IconWalk,
   Plus as IconPlus,
   RefreshCw as IconRefresh,
   Share2 as IconShare,

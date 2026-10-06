@@ -22,9 +22,10 @@ export function WeekStrip({
       date: d,
       run: list.filter((a) => a.sport === "run").reduce((s, a) => s + a.distance, 0),
       ride: list.filter((a) => a.sport === "ride").reduce((s, a) => s + a.distance, 0),
+      walk: list.filter((a) => a.sport === "walk").reduce((s, a) => s + a.distance, 0),
     };
   });
-  const max = Math.max(1, ...per.map((d) => d.run + d.ride));
+  const max = Math.max(1, ...per.map((d) => d.run + d.ride + d.walk));
   const labels = weekStart === "mon" ? LABELS_MON : LABELS_SUN;
   const H = 56;
   return (
@@ -32,7 +33,7 @@ export function WeekStrip({
       {per.map((d, i) => {
         const isToday = d.date === today;
         const future = d.date > today;
-        const total = d.run + d.ride;
+        const total = d.run + d.ride + d.walk;
         return (
           <div key={d.date} className="flex flex-col items-center gap-1.5" style={{ opacity: future ? 0.45 : 1 }}>
             <div className="flex w-full flex-col-reverse justify-start overflow-hidden rounded-md bg-surface-2" style={{ height: H }}>
@@ -40,6 +41,7 @@ export function WeekStrip({
                 <>
                   <div style={{ height: `${(d.run / max) * 100}%`, background: "var(--run)", minHeight: d.run > 0 ? 3 : 0 }} />
                   <div style={{ height: `${(d.ride / max) * 100}%`, background: "var(--ride)", minHeight: d.ride > 0 ? 3 : 0 }} />
+                  <div style={{ height: `${(d.walk / max) * 100}%`, background: "var(--walk)", minHeight: d.walk > 0 ? 3 : 0 }} />
                 </>
               )}
             </div>

@@ -1,7 +1,6 @@
-import type { GoalMetric, GoalPeriod, GoalSport, NewGoal } from "./types";
+import { ALL_SPORTS, type GoalMetric, type GoalPeriod, type NewGoal, type Sport } from "./types";
 
 const METRICS: GoalMetric[] = ["distance", "time", "elevation", "count", "streak"];
-const SPORTS: GoalSport[] = ["run", "ride", "both"];
 const PERIODS: GoalPeriod[] = ["week", "month", "year", "custom"];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -17,6 +16,14 @@ export const MAX_TARGET: Record<GoalMetric, number> = {
   streak: 366,
 };
 
+/** Valida y normaliza a orden canónico (run, ride, walk). */
+export function validateSports(input: unknown): Validation<Sport[]> {
+  if (!Array.isArray(input) || input.length === 0) return { ok: false, error: "Elige al menos un deporte" };
+  if (input.some((s) => !ALL_SPORTS.includes(s as Sport))) return { ok: false, error: "Deporte inválido" };
+  if (new Set(input).size !== input.length) return { ok: false, error: "Deportes repetidos" };
+  return { ok: true, value: ALL_SPORTS.filter((s) => input.includes(s)) };
+}
+
 export type Validation<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export function validateNewGoal(input: unknown): Validation<NewGoal> {
@@ -25,7 +32,8 @@ export function validateNewGoal(input: unknown): Validation<NewGoal> {
   const title = typeof o.title === "string" ? o.title.trim() : "";
   if (title.length < 1 || title.length > 80) return { ok: false, error: "El título debe tener entre 1 y 80 caracteres" };
   if (!METRICS.includes(o.metric as GoalMetric)) return { ok: false, error: "Métrica inválida" };
-  if (!SPORTS.includes(o.sport as GoalSport)) return { ok: false, error: "Deporte inválido" };
+  const sports = validateSports(o.sports);
+  if (!sports.ok) return sports;
   if (!PERIODS.includes(o.period as GoalPeriod)) return { ok: false, error: "Periodo inválido" };
   const metric = o.metric as GoalMetric;
   const target = Number(o.target);
@@ -41,7 +49,7 @@ export function validateNewGoal(input: unknown): Validation<NewGoal> {
     value: {
       title,
       metric,
-      sport: o.sport as GoalSport,
+      sports: sports.value,
       target,
       period: o.period as GoalPeriod,
       startDate: o.startDate,

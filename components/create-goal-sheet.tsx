@@ -5,9 +5,10 @@ import { periodRange } from "@/lib/dates";
 import { goalSentence, inputToBase, inputUnitLabel, suggestTitle } from "@/lib/goal-copy";
 import { validateNewGoal } from "@/lib/goal-validation";
 import { useData } from "@/lib/client/data";
-import type { GoalMetric, GoalPeriod, GoalSport, NewGoal } from "@/lib/types";
+import type { GoalMetric, GoalPeriod, NewGoal, Sport } from "@/lib/types";
 import { IconChevron } from "./icons";
 import { Sheet } from "./sheet";
+import { SportsPicker } from "./sports-picker";
 import { useToast } from "./toast";
 import { Button, Chip, ChipGroup, Field, inputClass } from "./ui";
 
@@ -19,11 +20,12 @@ const METRICS: { value: GoalMetric; title: string; hint: string }[] = [
   { value: "streak", title: "Racha", hint: "Días seguidos entrenando" },
 ];
 
-const TEMPLATES: { label: string; metric: GoalMetric; sport: GoalSport; period: Exclude<GoalPeriod, "custom">; target: number }[] = [
-  { label: "100 km corriendo al mes", metric: "distance", sport: "run", period: "month", target: 100 },
-  { label: "3 salidas por semana", metric: "count", sport: "both", period: "week", target: 3 },
-  { label: "200 km en bici al mes", metric: "distance", sport: "ride", period: "month", target: 200 },
-  { label: "7 días seguidos", metric: "streak", sport: "both", period: "month", target: 7 },
+const TEMPLATES: { label: string; metric: GoalMetric; sports: Sport[]; period: Exclude<GoalPeriod, "custom">; target: number }[] = [
+  { label: "100 km corriendo al mes", metric: "distance", sports: ["run"], period: "month", target: 100 },
+  { label: "30 km caminando al mes", metric: "distance", sports: ["walk"], period: "month", target: 30 },
+  { label: "3 salidas por semana", metric: "count", sports: ["run", "ride", "walk"], period: "week", target: 3 },
+  { label: "200 km en bici al mes", metric: "distance", sports: ["ride"], period: "month", target: 200 },
+  { label: "7 días seguidos", metric: "streak", sports: ["run", "ride", "walk"], period: "month", target: 7 },
 ];
 
 const PERIODS: { value: GoalPeriod; label: string }[] = [
@@ -38,7 +40,7 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
   const toast = useToast();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [metric, setMetric] = useState<GoalMetric>("distance");
-  const [sport, setSport] = useState<GoalSport>("run");
+  const [sports, setSports] = useState<Sport[]>(["run"]);
   const [targetText, setTargetText] = useState("");
   const [period, setPeriod] = useState<GoalPeriod>("month");
   const [customStart, setCustomStart] = useState("");
@@ -54,7 +56,7 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
     /* eslint-disable react-hooks/set-state-in-effect */
     setStep(1);
     setMetric("distance");
-    setSport("run");
+    setSports(["run"]);
     setTargetText("");
     setPeriod("month");
     setCustomStart(today);
@@ -74,18 +76,18 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
   const draft: NewGoal = {
     title: title.trim(),
     metric,
-    sport,
+    sports,
     target: base,
     period,
     ...range,
   };
-  const suggested = Number.isFinite(base) && base > 0 ? suggestTitle({ metric, sport, target: base, period }, settings.units) : "";
+  const suggested = Number.isFinite(base) && base > 0 ? suggestTitle({ metric, sports, target: base, period }, settings.units) : "";
   const shownTitle = titleTouched ? title : suggested;
   const check = validateNewGoal({ ...draft, title: shownTitle });
 
   const applyTemplate = (t: (typeof TEMPLATES)[number]) => {
     setMetric(t.metric);
-    setSport(t.sport);
+    setSports(t.sports);
     setPeriod(t.period);
     setTargetText(String(t.target));
     setTitleTouched(false);
@@ -182,12 +184,9 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
             />
           </Field>
           <div>
-            <p className="label mb-2 text-ink-2">Deporte</p>
-            <ChipGroup label="Deporte">
-              <Chip selected={sport === "run"} onClick={() => setSport("run")}>Correr</Chip>
-              <Chip selected={sport === "ride"} onClick={() => setSport("ride")}>Bici</Chip>
-              <Chip selected={sport === "both"} onClick={() => setSport("both")}>Ambos</Chip>
-            </ChipGroup>
+            <p className="label mb-2 text-ink-2">Deportes que cuentan</p>
+            <SportsPicker value={sports} onChange={setSports} />
+            <p className="body-s mt-2 text-ink-3">Puedes combinar los que quieras.</p>
           </div>
         </div>
       )}
@@ -226,7 +225,7 @@ export function CreateGoalSheet({ open, onClose }: { open: boolean; onClose: () 
             />
           </Field>
           {Number.isFinite(base) && base > 0 && range.startDate && range.endDate && range.endDate >= range.startDate && (
-            <p className="rounded-field bg-surface px-4 py-3 text-ink-2">{goalSentence({ metric, sport, target: base, ...range }, settings.units)}.</p>
+            <p className="rounded-field bg-surface px-4 py-3 text-ink-2">{goalSentence({ metric, sports, target: base, ...range }, settings.units)}.</p>
           )}
           {(error || (!check.ok && target > 0)) && (
             <p role="alert" className="text-danger">

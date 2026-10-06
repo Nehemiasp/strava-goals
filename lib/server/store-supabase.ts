@@ -1,16 +1,22 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
-import type { Activity, Goal } from "../types";
+import { ALL_SPORTS, type Activity, type Goal, type Sport } from "../types";
 import { required } from "./env";
 import type { AthleteRow, GoalPatch, Store } from "./store";
 
 type Row = Record<string, unknown>;
 
+/** Lee `sports`; si la fila es anterior a la migración 0002 cae a la columna `sport` antigua. */
+function sportsFrom(r: Row): Sport[] {
+  if (Array.isArray(r.sports) && r.sports.length > 0) return ALL_SPORTS.filter((s) => (r.sports as string[]).includes(s));
+  return r.sport === "ride" ? ["ride"] : r.sport === "run" ? ["run"] : ["run", "ride"];
+}
+
 const goalFrom = (r: Row): Goal => ({
   id: r.id as string,
   title: r.title as string,
   metric: r.metric as Goal["metric"],
-  sport: r.sport as Goal["sport"],
+  sports: sportsFrom(r),
   target: r.target as number,
   period: r.period as Goal["period"],
   startDate: r.start_date as string,
@@ -111,7 +117,7 @@ export function createSupabaseStore(): Store {
           athlete_id: athleteId,
           title: g.title,
           metric: g.metric,
-          sport: g.sport,
+          sports: g.sports,
           target: g.target,
           period: g.period,
           start_date: g.startDate,

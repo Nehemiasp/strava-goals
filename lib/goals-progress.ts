@@ -34,7 +34,7 @@ export function activitiesForGoal(goal: Goal, activities: Activity[]): Activity[
       (a) =>
         a.date >= goal.startDate &&
         a.date <= goal.endDate &&
-        (goal.sport === "both" || a.sport === goal.sport),
+        goal.sports.includes(a.sport),
     )
     .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
 }

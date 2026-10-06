@@ -34,8 +34,8 @@ export function ActivitySheet({ activity: a, settings, onClose }: { activity: Ac
           <div className="grid grid-cols-2 gap-2.5">
             <Metric label="Tiempo en movimiento" value={formatDuration(a.movingTime)} />
             <Metric
-              label={a.sport === "run" ? `Ritmo medio` : "Velocidad media"}
-              value={a.sport === "run" ? `${formatPace(a.avgSpeed, units)} /${distanceUnit(units)}` : `${formatSpeed(a.avgSpeed, units)} ${distanceUnit(units)}/h`}
+              label={a.sport !== "ride" ? "Ritmo medio" : "Velocidad media"}
+              value={a.sport !== "ride" ? `${formatPace(a.avgSpeed, units)} /${distanceUnit(units)}` : `${formatSpeed(a.avgSpeed, units)} ${distanceUnit(units)}/h`}
             />
             <Metric label="Desnivel positivo" value={`${formatElevation(a.elevation, units)} ${elevationUnit(units)}`} />
             <Metric label="Frecuencia cardíaca" value={a.avgHr ? `${Math.round(a.avgHr)} ppm` : "–"} />

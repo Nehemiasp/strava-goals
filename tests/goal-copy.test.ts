@@ -7,7 +7,7 @@ const goal: Goal = {
   id: "g",
   title: "x",
   metric: "distance",
-  sport: "run",
+  sports: ["run"],
   target: 100_000,
   period: "month",
   startDate: "2026-10-01",
@@ -65,11 +65,28 @@ describe("conversión de unidades de entrada", () => {
 
 describe("textos de creación", () => {
   it("sugiere un título legible", () => {
-    expect(suggestTitle({ metric: "distance", sport: "run", target: 100_000, period: "month" }, "metric")).toBe("100 km corriendo este mes");
-    expect(suggestTitle({ metric: "count", sport: "both", target: 3, period: "week" }, "metric")).toBe("3 salidas por semana");
+    expect(suggestTitle({ metric: "distance", sports: ["run"], target: 100_000, period: "month" }, "metric")).toBe("100 km corriendo este mes");
+    expect(suggestTitle({ metric: "count", sports: ["run", "ride", "walk"], target: 3, period: "week" }, "metric")).toBe("3 salidas por semana");
   });
   it("resume el goal en una frase", () => {
-    const s = goalSentence({ metric: "distance", sport: "run", target: 100_000, startDate: "2026-10-01", endDate: "2026-10-31" }, "metric");
+    const s = goalSentence({ metric: "distance", sports: ["run"], target: 100_000, startDate: "2026-10-01", endDate: "2026-10-31" }, "metric");
     expect(s).toBe("Correr 100 km entre el 1 de octubre de 2026 y el 31 de octubre de 2026");
+  });
+});
+
+describe("textos con varios deportes", () => {
+  const base = { metric: "distance" as const, target: 30_000, period: "month" as const };
+  it("títulos", () => {
+    expect(suggestTitle({ ...base, sports: ["walk"] }, "metric")).toBe("30 km caminando este mes");
+    expect(suggestTitle({ ...base, sports: ["run", "walk"] }, "metric")).toBe("30 km corriendo y caminando este mes");
+    expect(suggestTitle({ ...base, sports: ["run", "ride", "walk"] }, "metric")).toBe("30 km este mes");
+    expect(suggestTitle({ metric: "count", target: 3, period: "week", sports: ["walk"] }, "metric")).toBe("3 salidas por semana caminando");
+  });
+  it("frases de resumen", () => {
+    const r = { startDate: "2026-10-01", endDate: "2026-10-31" };
+    expect(goalSentence({ ...base, ...r, sports: ["walk"] }, "metric")).toMatch(/^Caminar 30 km entre el/);
+    expect(goalSentence({ ...base, ...r, sports: ["run", "walk"] }, "metric")).toMatch(/^Correr y caminar 30 km entre el/);
+    expect(goalSentence({ ...base, ...r, sports: ["run", "ride", "walk"] }, "metric")).toMatch(/^Moverte 30 km entre el/);
+    expect(goalSentence({ metric: "count", target: 3, sports: ["walk"], ...r }, "metric")).toMatch(/^Hacer 3 salidas caminando entre el/);
   });
 });

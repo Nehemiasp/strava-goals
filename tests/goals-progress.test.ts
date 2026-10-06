@@ -21,7 +21,7 @@ const goal = (over: Partial<Goal> = {}): Goal => ({
   id: "g1",
   title: "100 km en octubre",
   metric: "distance",
-  sport: "run",
+  sports: ["run"],
   target: 100_000,
   period: "month",
   startDate: "2026-10-01",
@@ -80,7 +80,7 @@ describe("computeProgress", () => {
   });
 
   it("cuenta salidas para metas de frecuencia", () => {
-    const g = goal({ metric: "count", sport: "both", target: 3, period: "week", startDate: "2026-10-05", endDate: "2026-10-11" });
+    const g = goal({ metric: "count", sports: ["run", "ride"], target: 3, period: "week", startDate: "2026-10-05", endDate: "2026-10-11" });
     const p = computeProgress(
       g,
       [act({ id: 1, date: "2026-10-05" }), act({ id: 2, date: "2026-10-06", sport: "ride" })],
@@ -91,7 +91,7 @@ describe("computeProgress", () => {
   });
 
   it("no proyecta rachas", () => {
-    const g = goal({ metric: "streak", sport: "both", target: 7 });
+    const g = goal({ metric: "streak", sports: ["run", "ride"], target: 7 });
     const p = computeProgress(g, [act({ id: 1, date: "2026-10-02" })], "2026-10-05");
     expect(p.projected).toBeNull();
   });
@@ -144,14 +144,36 @@ describe("selectores antes de cargar datos (today vacío)", () => {
 
 describe("tolerancia en conteos", () => {
   it("una diferencia menor a media salida es 'al día'", () => {
-    const g = goal({ metric: "count", sport: "both", target: 3, period: "week", startDate: "2026-10-05", endDate: "2026-10-11" });
+    const g = goal({ metric: "count", sports: ["run", "ride"], target: 3, period: "week", startDate: "2026-10-05", endDate: "2026-10-11" });
     // martes: esperado 3×2/7 ≈ 0,86; con 1 salida el adelanto es 0,14
     const p = computeProgress(g, [act({ id: 1, date: "2026-10-05" })], "2026-10-06");
     expect(p.state).toBe("onpace");
   });
   it("una salida completa de diferencia sí cuenta", () => {
-    const g = goal({ metric: "count", sport: "both", target: 3, period: "week", startDate: "2026-10-05", endDate: "2026-10-11" });
+    const g = goal({ metric: "count", sports: ["run", "ride"], target: 3, period: "week", startDate: "2026-10-05", endDate: "2026-10-11" });
     const p = computeProgress(g, [act({ id: 1, date: "2026-10-05" }), act({ id: 2, date: "2026-10-05" })], "2026-10-06");
     expect(p.state).toBe("ahead");
+  });
+});
+
+describe("deportes combinados (correr, bici, caminar)", () => {
+  const acts = [
+    act({ id: 1, date: "2026-10-02", sport: "run", distance: 10_000 }),
+    act({ id: 2, date: "2026-10-03", sport: "ride", distance: 40_000 }),
+    act({ id: 3, date: "2026-10-04", sport: "walk", sportType: "Walk", distance: 5_000 }),
+  ];
+  it("un goal de solo caminar ignora correr y bici", () => {
+    const p = computeProgress(goal({ sports: ["walk"] }), acts, "2026-10-10");
+    expect(p.current).toBe(5_000);
+    expect(p.activities.map((a) => a.id)).toEqual([3]);
+  });
+  it("un goal correr + caminar suma ambos y excluye bici", () => {
+    expect(computeProgress(goal({ sports: ["run", "walk"] }), acts, "2026-10-10").current).toBe(15_000);
+  });
+  it("un goal con los tres suma todo", () => {
+    expect(computeProgress(goal({ sports: ["run", "ride", "walk"] }), acts, "2026-10-10").current).toBe(55_000);
+  });
+  it("un goal correr + bici (antes 'ambos') no cuenta caminatas", () => {
+    expect(computeProgress(goal({ sports: ["run", "ride"] }), acts, "2026-10-10").current).toBe(50_000);
   });
 });

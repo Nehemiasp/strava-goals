@@ -15,11 +15,13 @@ export class StravaError extends Error {
 }
 
 const RUN_TYPES = new Set(["Run", "TrailRun", "VirtualRun"]);
+const WALK_TYPES = new Set(["Walk", "Hike"]);
 const RIDE_TYPES = new Set(["Ride", "GravelRide", "MountainBikeRide", "EBikeRide", "EMountainBikeRide", "VirtualRide"]);
 
 export function sportOf(type: string): Sport | null {
   if (RUN_TYPES.has(type)) return "run";
   if (RIDE_TYPES.has(type)) return "ride";
+  if (WALK_TYPES.has(type)) return "walk";
   return null;
 }
 
@@ -105,7 +107,7 @@ export function mapActivity(a: RawActivity): Activity | null {
   };
 }
 
-/** Descarga actividades de correr y bici posteriores a `afterEpoch` (segundos). Máximo 5 páginas de 200. */
+/** Descarga actividades de correr, bici y caminar posteriores a `afterEpoch` (segundos). Máximo 5 páginas de 200. */
 export async function fetchActivities(accessToken: string, afterEpoch: number): Promise<Activity[]> {
   const out: Activity[] = [];
   for (let page = 1; page <= 5; page++) {

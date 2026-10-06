@@ -70,14 +70,21 @@ export function formatSpeed(speedMs: number, units: Units): string {
   return nf1.format(v);
 }
 
-/** Ritmo para correr, velocidad para bici, con su unidad. */
+/** Ritmo para correr y caminar (como Strava), velocidad para bici, con su unidad. */
 export function formatPaceOrSpeed(sport: Sport, speedMs: number, units: Units): string {
-  return sport === "run"
+  return sport !== "ride"
     ? `${formatPace(speedMs, units)} /${distanceUnit(units)}`
     : `${formatSpeed(speedMs, units)} ${distanceUnit(units)}/h`;
 }
 
-export const sportLabel = (s: Sport) => (s === "run" ? "Correr" : "Bici");
+const SPORT_LABEL: Record<Sport, string> = { run: "Correr", ride: "Bici", walk: "Caminar" };
+export const sportLabel = (s: Sport) => SPORT_LABEL[s];
+
+/** "Correr", "Correr y Bici", "Correr, Bici y Caminar" (en el orden canónico). */
+export function sportsLabel(sports: readonly Sport[]): string {
+  const names = (["run", "ride", "walk"] as const).filter((s) => sports.includes(s)).map(sportLabel);
+  return names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
+}
 
 /** Valor de una meta con su unidad, separados para poder componer StatBlock. */
 export function formatMetric(

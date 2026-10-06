@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { ActivityList, ActivityRow } from "@/components/activity-row";
-import { IconBike, IconRefresh, IconRun } from "@/components/icons";
+import { IconRefresh } from "@/components/icons";
 import { SegmentedControl } from "@/components/segmented";
 import { StaleNotice, useScreenGate } from "@/components/screen-states";
 import { IconButton, TopBar } from "@/components/top-bar";
@@ -14,7 +14,13 @@ import { usePersisted } from "@/lib/client/use-persisted";
 import { distanceUnit, formatDistance } from "@/lib/format";
 import type { SportFilter } from "@/lib/types";
 
-const TITLE: Record<SportFilter, string> = { all: "Últimas 10", run: "Últimas 10 · correr", ride: "Últimas 10 · bici" };
+const TITLE: Record<SportFilter, string> = {
+  all: "Últimas 10",
+  run: "Últimas 10 · correr",
+  ride: "Últimas 10 · bici",
+  walk: "Últimas 10 · caminar",
+};
+const EMPTY_OF: Record<Exclude<SportFilter, "all">, string> = { run: "correr", ride: "bici", walk: "caminar" };
 
 export default function ActivityPage() {
   const gate = useScreenGate();
@@ -41,8 +47,9 @@ export default function ActivityPage() {
           onChange={setFilter}
           options={[
             { value: "all", label: "Todo" },
-            { value: "run", label: "Correr", icon: <IconRun size={16} strokeWidth={1.75} aria-hidden /> },
-            { value: "ride", label: "Bici", icon: <IconBike size={16} strokeWidth={1.75} aria-hidden /> },
+            { value: "run", label: "Correr" },
+            { value: "ride", label: "Bici" },
+            { value: "walk", label: "Caminar" },
           ]}
         />
         {gate ?? (
@@ -56,7 +63,7 @@ export default function ActivityPage() {
             </div>
             {rows.length === 0 ? (
               <EmptyState
-                title={filter === "all" ? "Sin actividades" : `Sin actividades de ${filter === "run" ? "correr" : "bici"}`}
+                title={filter === "all" ? "Sin actividades" : `Sin actividades de ${EMPTY_OF[filter]}`}
                 body="Cuando registres una en Strava y la actualices aquí, aparecerá en esta lista."
               />
             ) : (

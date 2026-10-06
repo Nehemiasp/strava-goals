@@ -10,15 +10,17 @@ import {
   longDate,
   shortDate,
   sportLabel,
+  sportsLabel,
 } from "./format";
 import { computeProgress } from "./goals-progress";
-import type { Activity, Goal, Settings, SportFilter } from "./types";
+import { ALL_SPORTS, type Activity, type Goal, type Settings, type Sport } from "./types";
 
 export type BriefFormat = "markdown" | "json";
 
 export interface BriefOptions {
   rangeDays: 30 | 90 | 365;
-  sport: SportFilter;
+  /** Deportes incluidos: no vacío, en orden canónico. */
+  sports: Sport[];
   includeGoals: boolean;
   includeActivities: boolean;
   includeTitles: boolean;
@@ -32,7 +34,7 @@ export const DEFAULT_PROMPT =
 
 export const DEFAULT_BRIEF_OPTIONS: BriefOptions = {
   rangeDays: 90,
-  sport: "all",
+  sports: [...ALL_SPORTS],
   includeGoals: true,
   includeActivities: true,
   includeTitles: false,
@@ -53,6 +55,7 @@ interface WeekRow {
   weekStart: string;
   runM: number;
   rideM: number;
+  walkM: number;
   count: number;
   elevation: number;
   movingTime: number;
@@ -62,9 +65,10 @@ export function weeklySummary(activities: Activity[], weekStart: "mon" | "sun"):
   const map = new Map<string, WeekRow>();
   for (const a of activities) {
     const key = startOfWeek(a.date, weekStart);
-    const row = map.get(key) ?? { weekStart: key, runM: 0, rideM: 0, count: 0, elevation: 0, movingTime: 0 };
+    const row = map.get(key) ?? { weekStart: key, runM: 0, rideM: 0, walkM: 0, count: 0, elevation: 0, movingTime: 0 };
     if (a.sport === "run") row.runM += a.distance;
-    else row.rideM += a.distance;
+    else if (a.sport === "ride") row.rideM += a.distance;
+    else row.walkM += a.distance;
     row.count += 1;
     row.elevation += a.elevation;
     row.movingTime += a.movingTime;
@@ -76,7 +80,24 @@ export function weeklySummary(activities: Activity[], weekStart: "mon" | "sun"):
 /** Aproximación de tokens para texto en español/tablas: ~3,5 caracteres por token. */
 export const estimateTokens = (text: string) => Math.ceil(text.length / 3.5);
 
-const sportWord = (s: SportFilter) => (s === "all" ? "correr y bicicleta" : s === "run" ? "correr" : "bicicleta");
+const SPORT_NOUN: Record<Sport, string> = { run: "correr", ride: "ciclismo", walk: "caminar" };
+const sportWord = (sports: readonly Sport[]) => {
+  const names = ALL_SPORTS.filter((s) => sports.includes(s)).map((s) => SPORT_NOUN[s]);
+  return names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
+};
+
+/** Convierte opciones guardadas por versiones anteriores (`sport` único) al formato actual. */
+export function migrateBriefOptions(raw: unknown): Partial<BriefOptions> {
+  if (typeof raw !== "object" || raw === null) return {};
+  const { sport, sports, ...rest } = raw as Record<string, unknown>;
+  const valid = Array.isArray(sports) ? ALL_SPORTS.filter((s) => sports.includes(s)) : [];
+  if (valid.length > 0) return { ...rest, sports: valid } as Partial<BriefOptions>;
+  // Antes: "all" significaba correr + bici.
+  if (sport === "run") return { ...rest, sports: ["run"] } as Partial<BriefOptions>;
+  if (sport === "ride") return { ...rest, sports: ["ride"] } as Partial<BriefOptions>;
+  if (sport === "all") return { ...rest, sports: ["run", "ride"] } as Partial<BriefOptions>;
+  return rest as Partial<BriefOptions>;
+}
 
 export function buildBrief(
   activities: Activity[],
@@ -88,7 +109,7 @@ export function buildBrief(
   const { units, weekStart } = settings;
   const from = addDays(today, -(options.rangeDays - 1));
   const inRange = activities
-    .filter((a) => a.date >= from && a.date <= today && (options.sport === "all" || a.sport === options.sport))
+    .filter((a) => a.date >= from && a.date <= today && options.sports.includes(a.sport))
     .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
 
   const activeGoals = options.includeGoals
@@ -104,12 +125,12 @@ export function buildBrief(
     text = JSON.stringify(
       {
         instrucciones: options.prompt,
-        periodo: { desde: from, hasta: today, deporte: options.sport },
+        periodo: { desde: from, hasta: today, deportes: options.sports.map(sportLabel) },
         unidades: { distancia: distanceUnit(units), desnivel: elevationUnit(units) },
         goals: activeGoals.map(({ goal, p }) => ({
           titulo: goal.title,
           metrica: goal.metric,
-          deporte: goal.sport,
+          deportes: goal.sports.map(sportLabel),
           desde: goal.startDate,
           hasta: goal.endDate,
           objetivo: formatMetricInline(goal.metric, goal.target, units),
@@ -119,8 +140,9 @@ export function buildBrief(
         })),
         resumen_semanal: weeks.map((w) => ({
           semana: w.weekStart,
-          correr: `${formatDistance(w.runM, units)} ${distanceUnit(units)}`,
-          bici: `${formatDistance(w.rideM, units)} ${distanceUnit(units)}`,
+          ...(options.sports.includes("run") ? { correr: `${formatDistance(w.runM, units)} ${distanceUnit(units)}` } : {}),
+          ...(options.sports.includes("ride") ? { bici: `${formatDistance(w.rideM, units)} ${distanceUnit(units)}` } : {}),
+          ...(options.sports.includes("walk") ? { caminar: `${formatDistance(w.walkM, units)} ${distanceUnit(units)}` } : {}),
           salidas: w.count,
           desnivel: `${formatElevation(w.elevation, units)} ${elevationUnit(units)}`,
           tiempo: formatDuration(w.movingTime),
@@ -145,7 +167,7 @@ export function buildBrief(
     const lines: string[] = [];
     lines.push("# Contexto", "");
     lines.push(
-      `Practico ${sportWord(options.sport)} como aficionado. Estos son mis datos de Strava del ${longDate(from)} al ${longDate(today)}. Distancias en ${distanceUnit(units)}, desnivel en ${elevationUnit(units)}.`,
+      `Practico ${sportWord(options.sports)} como aficionado. Estos son mis datos de Strava del ${longDate(from)} al ${longDate(today)}. Distancias en ${distanceUnit(units)}, desnivel en ${elevationUnit(units)}.`,
       "",
     );
     lines.push("# Instrucciones", "", options.prompt.trim(), "");
@@ -154,7 +176,7 @@ export function buildBrief(
       lines.push("# Goals activos", "");
       if (activeGoals.length === 0) lines.push("No tengo goals activos.");
       for (const { goal, p } of activeGoals) {
-        const sport = goal.sport === "both" ? "correr y bici" : goal.sport === "run" ? "correr" : "bici";
+        const sport = sportsLabel(goal.sports).toLowerCase();
         lines.push(
           `- **${goal.title}** (${sport}, ${shortDate(goal.startDate)}–${shortDate(goal.endDate)}): objetivo ${formatMetricInline(goal.metric, goal.target, units)}; llevo ${formatMetricInline(goal.metric, p.current, units)}; esperado a hoy ${formatMetricInline(goal.metric, p.expected, units)}.`,
         );
@@ -166,11 +188,14 @@ export function buildBrief(
     if (weeks.length === 0) {
       lines.push("Sin actividades en este periodo.", "");
     } else {
-      lines.push(`| Semana del | Correr (${distanceUnit(units)}) | Bici (${distanceUnit(units)}) | Salidas | Desnivel (${elevationUnit(units)}) | Tiempo |`);
-      lines.push("|---|---|---|---|---|---|");
+      const cols = ALL_SPORTS.filter((sp) => options.sports.includes(sp));
+      const head = cols.map((sp) => `${sportLabel(sp)} (${distanceUnit(units)})`);
+      lines.push(`| Semana del | ${head.join(" | ")} | Salidas | Desnivel (${elevationUnit(units)}) | Tiempo |`);
+      lines.push(`|---|${cols.map(() => "---|").join("")}---|---|---|`);
+      const dist = (w: WeekRow, sp: Sport) => formatDistance(sp === "run" ? w.runM : sp === "ride" ? w.rideM : w.walkM, units);
       for (const w of weeks) {
         lines.push(
-          `| ${shortDate(w.weekStart)} | ${formatDistance(w.runM, units)} | ${formatDistance(w.rideM, units)} | ${w.count} | ${formatElevation(w.elevation, units)} | ${formatDuration(w.movingTime)} |`,
+          `| ${shortDate(w.weekStart)} | ${cols.map((sp) => dist(w, sp)).join(" | ")} | ${w.count} | ${formatElevation(w.elevation, units)} | ${formatDuration(w.movingTime)} |`,
         );
       }
       lines.push("");

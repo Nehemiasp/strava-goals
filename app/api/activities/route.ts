@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     const force = new URL(req.url).searchParams.get("refresh") === "1";
     const { activities, stale, syncedAt } = await getActivities(id, force);
     const sorted = [...activities].sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
-    const seen = { run: 0, ride: 0 };
+    const seen = { run: 0, ride: 0, walk: 0 };
     const slim = sorted.map((a) => {
       const keep = seen[a.sport]++ < POLYLINE_PER_SPORT;
       return keep ? a : { ...a, polyline: null };
