@@ -56,6 +56,8 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   });
   const body = await res.json().catch(() => ({}));
   if (res.status === 401) {
+    // Recarga completa a propósito: la sesión es inválida y hay que descartar el estado.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/connect?error=session");
     throw new ApiError(401, "Sesión caducada");
   }

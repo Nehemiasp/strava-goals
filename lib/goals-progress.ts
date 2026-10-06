@@ -25,6 +25,8 @@ export interface Progress {
 }
 
 const TOLERANCE = 0.01;
+/** En conteos (salidas) una diferencia menor a media unidad no es "por delante" ni "por detrás". */
+const COUNT_TOLERANCE = 0.5;
 
 export function activitiesForGoal(goal: Goal, activities: Activity[]): Activity[] {
   return activities
@@ -79,12 +81,14 @@ export function computeProgress(goal: Goal, activities: Activity[], today: strin
   const delta = current - expected;
   const ratio = Math.min(1, goal.target > 0 ? current / goal.target : 0);
 
+  const tol = goal.metric === "count" ? COUNT_TOLERANCE : goal.target * TOLERANCE;
+
   let state: ProgressState;
   if (current >= goal.target) state = "done";
   else if (today > goal.endDate) state = "expired";
   else if (today < goal.startDate) state = "upcoming";
-  else if (delta > goal.target * TOLERANCE) state = "ahead";
-  else if (delta >= -goal.target * TOLERANCE) state = "onpace";
+  else if (delta > tol) state = "ahead";
+  else if (delta >= -tol) state = "onpace";
   else state = "behind";
 
   const projected =

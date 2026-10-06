@@ -213,5 +213,5 @@ export const MAX_DEEPLINK_CHARS = 6000;
 export const CHAT_LINKS = [
   { id: "chatgpt", label: "ChatGPT", url: (q: string) => `https://chatgpt.com/?q=${encodeURIComponent(q)}` },
   { id: "claude", label: "Claude", url: (q: string) => `https://claude.ai/new?q=${encodeURIComponent(q)}` },
-  { id: "gemini", label: "Gemini", url: (_q: string) => "https://gemini.google.com/app" },
+  { id: "gemini", label: "Gemini", url: () => "https://gemini.google.com/app" },
 ] as const;

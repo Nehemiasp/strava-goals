@@ -1,6 +1,6 @@
 # Strava Goals · Sistema de diseño
 
-> Versión 0.1 · para revisión antes de escribir código.
+> Versión 0.2 · implementado en el Paso 1–6; ver «Cambios respecto a 0.1» al final.
 > Nombre de trabajo: **Goals** (pendiente de decidir, ver §14).
 
 ---
@@ -81,7 +81,7 @@ Reglas:
 
 | Token | Claro | Oscuro |
 |---|---|---|
-| `--glass-tint` | `canvas` al 62 % | `canvas` al 58 % |
+| `--glass-tint` | `canvas` al 76 % | `canvas` al 72 % |
 | `--glass-edge` | blanco al 55 % (borde interior superior 0,5 px) | blanco al 14 % |
 | `--glass-shadow` | `0 8px 32px rgb(0 0 0 / .10)` | `0 8px 32px rgb(0 0 0 / .45)` |
 
@@ -318,7 +318,7 @@ Navegación: **Hoy · Actividad · Goals · Coach**. Ajustes se abre desde el av
 ```
 ┌──────────────────────────────┐
 │ Goals                  [ + ] │
-│ Activos · Completados        │  segmentado
+│ Activos · Historial          │  segmentado
 │                              │
 │ ┌──────────────────────────┐ │
 │ │ 100 km en octubre        │ │
@@ -357,7 +357,7 @@ No hay IA dentro de la app. Esta pantalla prepara un **brief** con tus datos par
 │ Deporte   [Correr][Bici][Ambos]
 │ Incluir   ◉ Goals activos    │  toggles
 │           ◉ Actividades      │
-│           ○ Ubicación y rutas│  apagado por defecto
+│           ○ Títulos          │  apagado por defecto
 │ Formato   Markdown · JSON    │  segmentado
 │                              │
 │ ┌──────────────────────────┐ │
@@ -442,3 +442,19 @@ La API de Strava exige su identidad visual. Se cumple así:
 6. **Unidades por defecto.** Métricas (km, m, min/km) con opción a millas.
 
 Cuando apruebes o ajustes estas decisiones, empiezo por el **Paso 1** (andamiaje Next.js + PWA + tokens).
+
+---
+
+## 15. Cambios respecto a 0.1 (decididos al construir)
+
+| Tema | Decisión |
+|---|---|
+| Tinte del vidrio | Sube de 62/58 % a **76/72 %**. El desenfoque no siempre está disponible (navegadores antiguos, `prefers-reduced-transparency`, renderizado por software), y con poco tinte el texto de debajo se cuela. |
+| Goals · pestañas | «Activos» e **«Historial»** (cumplidos, vencidos y archivados), en vez de «Completados». |
+| Coach · opciones | No hay «Ubicación y rutas»: el brief **nunca** incluye coordenadas ni polilíneas. Las opciones son goals, actividades, frecuencia cardíaca y **títulos** (apagado por defecto). |
+| Ajustes | Unidades, inicio de semana, tema y siluetas se guardan **en el dispositivo** (localStorage). Los goals sí se sincronizan en Supabase. |
+| Rachas | «Racha» mide la racha más larga de días seguidos dentro del periodo; no tiene muesca de ritmo ni proyección. |
+| «Por delante / por detrás» | En conteos (salidas) una diferencia menor a media salida se lee «Vas al día». |
+| Cifras | Distancias de actividad con un decimal fijo (`7,0 km`); objetivos recortados (`100 km`). |
+| Botón de Strava | Provisional (naranja de marca + texto). **Pendiente** sustituirlo por el asset oficial antes de publicar. |
+| Fuera de alcance por ahora | Modo sin conexión con datos (el service worker solo cachea estáticos y muestra una página offline), notificaciones y webhooks de Strava. |

@@ -130,3 +130,28 @@ describe("dates", () => {
     expect(periodRange("week", "2026-10-06")).toEqual({ startDate: "2026-10-05", endDate: "2026-10-11" });
   });
 });
+
+import { thisWeek, weeklyTrend, withProgress } from "@/lib/client/selectors";
+
+describe("selectores antes de cargar datos (today vacío)", () => {
+  it("no lanzan y devuelven resultados vacíos", () => {
+    expect(() => weeklyTrend([], "", "mon")).not.toThrow();
+    expect(weeklyTrend([], "", "mon")).toEqual([]);
+    expect(thisWeek([], "", "mon").total).toBe(0);
+    expect(withProgress([goal()], [], "")).toEqual([]);
+  });
+});
+
+describe("tolerancia en conteos", () => {
+  it("una diferencia menor a media salida es 'al día'", () => {
+    const g = goal({ metric: "count", sport: "both", target: 3, period: "week", startDate: "2026-10-05", endDate: "2026-10-11" });
+    // martes: esperado 3×2/7 ≈ 0,86; con 1 salida el adelanto es 0,14
+    const p = computeProgress(g, [act({ id: 1, date: "2026-10-05" })], "2026-10-06");
+    expect(p.state).toBe("onpace");
+  });
+  it("una salida completa de diferencia sí cuenta", () => {
+    const g = goal({ metric: "count", sport: "both", target: 3, period: "week", startDate: "2026-10-05", endDate: "2026-10-11" });
+    const p = computeProgress(g, [act({ id: 1, date: "2026-10-05" }), act({ id: 2, date: "2026-10-05" })], "2026-10-06");
+    expect(p.state).toBe("ahead");
+  });
+});

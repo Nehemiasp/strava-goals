@@ -11,6 +11,7 @@ const nf = (min: number, max: number) =>
   new Intl.NumberFormat(LOCALE, { minimumFractionDigits: min, maximumFractionDigits: max });
 const nf0 = nf(0, 0);
 const nf1 = nf(0, 1);
+const nf1fixed = nf(1, 1);
 const nf2 = nf(0, 2);
 
 export function metersToDisplay(m: number, units: Units): number {
@@ -24,9 +25,15 @@ export function displayToMeters(v: number, units: Units): number {
 export const distanceUnit = (units: Units) => (units === "metric" ? "km" : "mi");
 export const elevationUnit = (units: Units) => (units === "metric" ? "m" : "ft");
 
+/** Distancia con un decimal fijo ("7,0"), para que las columnas de cifras sean consistentes. */
 export function formatDistance(m: number, units: Units, digits = 1): string {
   const v = metersToDisplay(m, units);
-  return (digits === 0 ? nf0 : digits === 2 ? nf2 : nf1).format(v);
+  return (digits === 0 ? nf0 : digits === 2 ? nf2 : nf1fixed).format(v);
+}
+
+/** Distancia recortada ("100", "969,7"): para objetivos y metas, donde "100,0" sobra. */
+function formatDistanceTrim(m: number, units: Units): string {
+  return nf1.format(metersToDisplay(m, units));
 }
 
 export function formatElevation(m: number, units: Units): string {
@@ -80,7 +87,7 @@ export function formatMetric(
 ): { value: string; unit: string } {
   switch (metric) {
     case "distance":
-      return { value: formatDistance(base, units), unit: distanceUnit(units) };
+      return { value: formatDistanceTrim(base, units), unit: distanceUnit(units) };
     case "time":
       return { value: formatHours(base), unit: "h" };
     case "elevation":

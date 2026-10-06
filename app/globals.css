@@ -16,7 +16,7 @@
   --amber: #9a6200;
   --danger: #c0392b;
 
-  --glass-alpha: 62%;
+  --glass-alpha: 76%;
   --glass-edge: rgb(255 255 255 / 0.55);
   --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.1);
   --lens: rgb(255 255 255 / 0.92);
@@ -38,7 +38,7 @@
     --ride: #6faeff;
     --amber: #f2b84b;
     --danger: #ff7a6e;
-    --glass-alpha: 58%;
+    --glass-alpha: 72%;
     --glass-edge: rgb(255 255 255 / 0.14);
     --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.45);
     --lens: rgb(255 255 255 / 0.16);
@@ -60,7 +60,7 @@
   --ride: #6faeff;
   --amber: #f2b84b;
   --danger: #ff7a6e;
-  --glass-alpha: 58%;
+  --glass-alpha: 72%;
   --glass-edge: rgb(255 255 255 / 0.14);
   --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.45);
   --lens: rgb(255 255 255 / 0.16);
@@ -90,32 +90,35 @@
 }
 
 /* ───────────── Base ───────────── */
-html {
-  background: var(--canvas);
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
-body {
-  background: var(--canvas);
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  overscroll-behavior-y: none;
-}
-button {
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-:focus-visible {
-  outline: 2px solid var(--fern);
-  outline-offset: 2px;
-}
-::selection {
-  background: color-mix(in oklab, var(--fern) 28%, transparent);
+/* Dentro de @layer base: si no, estas reglas ganan a las utilidades de Tailwind (p. ej. text-fern en <button>). */
+@layer base {
+  html {
+    background: var(--canvas);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  :focus-visible {
+    outline: 2px solid var(--fern);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--fern) 28%, transparent);
+  }
 }
 
 /* ───────────── Tipografía (DISEÑO.md §4) ───────────── */
