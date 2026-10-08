@@ -18,6 +18,8 @@ export interface Activity {
   avgSpeed: number;
   avgHr: number | null;
   polyline: string | null;
+  /** Origen del dato. Ausente = Strava. Las manuales las agrega la persona y no traen FC ni ruta. */
+  source?: "strava" | "manual";
 }
 
 export type GoalMetric = "distance" | "time" | "elevation" | "count" | "streak";
@@ -82,3 +84,21 @@ export interface PartnerInfo {
 }
 
 export type VersusMetric = "distance" | "time" | "elevation" | "count";
+
+/** Lo que la persona escribe al agregar una actividad a mano. Unidades base: metros, segundos. */
+export interface ManualInput {
+  sport: Sport;
+  /** Fecha local, `YYYY-MM-DD`. */
+  date: string;
+  distance: number;
+  /** 0 si no se sabe. */
+  movingTime: number;
+  elevation: number;
+  name: string;
+}
+
+export interface ManualActivity extends ManualInput {
+  /** Id de la fila en la base (positivo). En `Activity` se expone como `-id`. */
+  id: number;
+  createdAt: string;
+}

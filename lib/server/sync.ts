@@ -1,5 +1,6 @@
 import "server-only";
 import { addDays, todayLocal } from "../dates";
+import { toActivity } from "../manual";
 import type { Activity } from "../types";
 import { decrypt, encrypt } from "./crypto";
 import { demoActivities, isDemoId } from "./demo";
@@ -32,17 +33,36 @@ async function validAccessToken(row: AthleteRow): Promise<string> {
 }
 
 export interface ActivitiesResult {
+  /** Strava + las agregadas a mano. */
   activities: Activity[];
+  /** `false` si aún no existe la tabla de actividades manuales (migración 0004 sin ejecutar). */
+  manualAvailable: boolean;
   /** `true` si Strava no respondió y se devuelve la caché. */
   stale: boolean;
   syncedAt: string | null;
 }
 
 /**
- * Devuelve las actividades del atleta (últimos ~400 días). Sincroniza con Strava como máximo cada 10 minutos
+ * Actividades agregadas a mano, ya convertidas. Si la tabla aún no existe devuelve `available: false`
+ * en lugar de fallar: el resto de la app sigue funcionando sin la función.
+ */
+export async function listManualSafe(athleteId: number, since: string): Promise<{ activities: Activity[]; available: boolean }> {
+  try {
+    const rows = await (await getStore()).listManual(athleteId, since);
+    return { activities: rows.map(toActivity), available: true };
+  } catch (e) {
+    console.error("manual: no disponible", e instanceof Error ? e.message : e);
+    return { activities: [], available: false };
+  }
+}
+
+type StravaResult = Omit<ActivitiesResult, "manualAvailable">;
+
+/**
+ * Devuelve las actividades del atleta, de Strava y agregadas a mano (últimos ~400 días). Sincroniza con Strava como máximo cada 10 minutos
  * para no agotar el límite de la API (200 lecturas / 15 min, 2000 / día en nivel estándar).
  */
-export async function getActivities(athleteId: number, force = false): Promise<ActivitiesResult> {
+async function getStravaActivities(athleteId: number, force = false): Promise<StravaResult> {
   const today = todayLocal();
   const since = addDays(today, -FIRST_SYNC_DAYS);
 
@@ -75,4 +95,10 @@ export async function getActivities(athleteId: number, force = false): Promise<A
     // 429 u otro fallo transitorio: servimos lo que hay en caché.
     return { activities: await store.listActivities(athleteId, since), stale: true, syncedAt: row.syncedAt };
   }
+}
+
+export async function getActivities(athleteId: number, force = false): Promise<ActivitiesResult> {
+  const base = await getStravaActivities(athleteId, force);
+  const manual = await listManualSafe(athleteId, addDays(todayLocal(), -FIRST_SYNC_DAYS));
+  return { ...base, activities: [...base.activities, ...manual.activities], manualAvailable: manual.available };
 }

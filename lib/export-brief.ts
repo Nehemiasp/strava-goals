@@ -13,6 +13,7 @@ import {
   sportsLabel,
 } from "./format";
 import { computeProgress } from "./goals-progress";
+import { isManual } from "./manual";
 import { ALL_SPORTS, type Activity, type Goal, type Settings, type Sport } from "./types";
 
 export type BriefFormat = "markdown" | "json";
@@ -151,6 +152,7 @@ export function buildBrief(
           ? inRange.map((a) => ({
               fecha: a.date,
               deporte: sportLabel(a.sport),
+              fuente: isManual(a) ? "manual" : "strava",
               ...(options.includeTitles ? { titulo: a.name } : {}),
               distancia: `${formatDistance(a.distance, units)} ${distanceUnit(units)}`,
               tiempo: formatDuration(a.movingTime),
@@ -206,6 +208,9 @@ export function buildBrief(
       if (inRange.length === 0) {
         lines.push("Sin actividades en este periodo.");
       } else {
+        if (inRange.some(isManual)) {
+          lines.push("«(manual)» = agregada a mano por la persona: sin frecuencia cardíaca ni ritmo medido por GPS.", "");
+        }
         const hr = options.includeHr;
         const title = options.includeTitles;
         lines.push(
@@ -214,7 +219,7 @@ export function buildBrief(
         lines.push(`|---|---|${title ? "---|" : ""}---|---|---|---|${hr ? "---|" : ""}`);
         for (const a of inRange) {
           lines.push(
-            `| ${shortDate(a.date)} | ${sportLabel(a.sport)} |${title ? ` ${a.name.replace(/\|/g, "/")} |` : ""} ${formatDistance(a.distance, units)} | ${formatDuration(a.movingTime)} | ${formatPaceOrSpeed(a.sport, a.avgSpeed, units)} | ${formatElevation(a.elevation, units)} |${hr ? ` ${a.avgHr ? Math.round(a.avgHr) : "–"} |` : ""}`,
+            `| ${shortDate(a.date)} | ${sportLabel(a.sport)}${isManual(a) ? " (manual)" : ""} |${title ? ` ${a.name.replace(/\|/g, "/")} |` : ""} ${formatDistance(a.distance, units)} | ${formatDuration(a.movingTime)} | ${formatPaceOrSpeed(a.sport, a.avgSpeed, units)} | ${formatElevation(a.elevation, units)} |${hr ? ` ${a.avgHr ? Math.round(a.avgHr) : "–"} |` : ""}`,
           );
         }
       }

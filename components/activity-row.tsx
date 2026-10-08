@@ -1,9 +1,24 @@
 import { distanceUnit, elevationUnit, formatDistance, formatDuration, formatElevation, formatPaceOrSpeed, relativeDate, sportLabel } from "@/lib/format";
+import { isManual } from "@/lib/manual";
 import type { Activity, Settings } from "@/lib/types";
 import { RouteGlyph } from "./route-glyph";
 
 export function activitySentence(a: Activity, units: Settings["units"], today: string): string {
-  return `${a.name}, ${sportLabel(a.sport)}, ${relativeDate(a.date, today)}, ${formatDistance(a.distance, units)} ${distanceUnit(units) === "km" ? "kilómetros" : "millas"}, ${formatDuration(a.movingTime)}`;
+  const time = a.movingTime > 0 ? `, ${formatDuration(a.movingTime)}` : "";
+  const manual = isManual(a) ? ", agregada a mano" : "";
+  return `${a.name}, ${sportLabel(a.sport)}, ${relativeDate(a.date, today)}, ${formatDistance(a.distance, units)} ${distanceUnit(units) === "km" ? "kilómetros" : "millas"}${time}${manual}`;
+}
+
+/** Ritmo · tiempo · desnivel. En las manuales solo se muestra lo que la persona indicó. */
+export function activityStats(a: Activity, units: Settings["units"]): string {
+  const elevation = `+${formatElevation(a.elevation, units)} ${elevationUnit(units)}`;
+  if (!isManual(a)) return `${formatPaceOrSpeed(a.sport, a.avgSpeed, units)} · ${formatDuration(a.movingTime)} · ${elevation}`;
+  const parts = [
+    a.avgSpeed > 0 ? formatPaceOrSpeed(a.sport, a.avgSpeed, units) : null,
+    a.movingTime > 0 ? formatDuration(a.movingTime) : null,
+    a.elevation > 0 ? elevation : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : "Sin tiempo ni desnivel";
 }
 
 export function ActivityRow({
@@ -31,9 +46,10 @@ export function ActivityRow({
       </div>
       <div className="body-s col-span-2 min-w-0 truncate text-ink-2">
         {sportLabel(a.sport)} · {relativeDate(a.date, today)}
+        {isManual(a) && <span className="font-medium text-ink"> · Manual</span>}
       </div>
       <div className="body-s tnum col-span-2 text-ink-3">
-        {formatPaceOrSpeed(a.sport, a.avgSpeed, units)} · {formatDuration(a.movingTime)} · +{formatElevation(a.elevation, units)} {elevationUnit(units)}
+        {activityStats(a, units)}
       </div>
     </div>
   );

@@ -503,3 +503,17 @@ Cuando apruebes o ajustes estas decisiones, empiezo por el **Paso 1** (andamiaje
 | Color | Tú = verde de acento; la otra persona = gris neutro (`--ink-2`). No se usa rojo/verde de «bien/mal» entre personas, y siempre hay etiqueta de texto. |
 | Frescura | Los datos de la otra persona se sincronizan con su propia sesión de Strava, con la misma caché de 10 min. La pantalla indica «actualizados hace X» y avisa si no se pudo actualizar. |
 | Sin migración | Si las tablas aún no existen, la función se oculta y el resto de la app no se ve afectado. |
+
+### 15.5 Actividades agregadas a mano
+
+| Tema | Decisión |
+|---|---|
+| Qué es | Una actividad completa que la persona escribe: deporte, fecha, distancia y, opcionalmente, tiempo, desnivel y nombre. Cuenta en Actividad, Hoy, goals, récords, Coach y el reto, igual que una de Strava. |
+| Dónde | Botón «+» en la barra de Actividad, junto a «Actualizar». Si el servidor aún no tiene la tabla, el botón no aparece. |
+| Cómo se ve | La fila lleva «· Manual» y solo muestra los datos que existen («Sin tiempo ni desnivel» si no hay ninguno). En el detalle se oculta «Ver en Strava» y aparecen «Editar» y «Eliminar» con confirmación. Los valores ausentes se muestran como «–», nunca como «0:00». |
+| Reglas | Fecha no futura y de los últimos 400 días (la ventana que la app carga); distancia > 0 y ≤ 1.000 km; tiempo 0–48 h; desnivel 0–20.000 m; hasta 500 por persona. |
+| Sin tiempo | No hay ritmo ni velocidad, no cuenta para el «mejor ritmo» y no suma en goals de tiempo; sí suma en distancia, desnivel y número de salidas. |
+| Duplicados | El formulario avisa: «Si ya está en Strava, no la agregues: se contaría dos veces». No se intenta deduplicar automáticamente. |
+| Reto | Cuentan en los totales que ve la otra persona, como cualquier actividad; de ellas solo salen totales por día y deporte (ni nombre ni marca de manual). |
+| Coach | El brief marca «(manual)» y añade `fuente: "manual"` en JSON, para que la IA sepa que no traen FC ni ritmo medido. |
+| Deporte por defecto | Se recuerda el último que se usó. |

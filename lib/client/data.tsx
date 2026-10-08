@@ -2,7 +2,16 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { todayLocal } from "../dates";
-import { DEFAULT_SETTINGS, type Activity, type AthleteInfo, type Goal, type NewGoal, type PartnerInfo, type Settings } from "../types";
+import {
+  DEFAULT_SETTINGS,
+  type Activity,
+  type AthleteInfo,
+  type Goal,
+  type ManualInput,
+  type NewGoal,
+  type PartnerInfo,
+  type Settings,
+} from "../types";
 
 interface DataState {
   me: AthleteInfo | null;
@@ -13,6 +22,8 @@ interface DataState {
   partner: PartnerInfo | null;
   /** `false` si el servidor no tiene aún las tablas del vínculo: la interfaz oculta el reto. */
   linkAvailable: boolean;
+  /** `false` si el servidor aún no tiene la tabla de actividades manuales: la interfaz oculta el "+". */
+  manualAvailable: boolean;
   today: string;
   /** `loading` solo en la primera carga; después se refresca en segundo plano. */
   status: "loading" | "ready" | "error";
@@ -24,6 +35,9 @@ interface DataState {
   updateGoal: (id: string, patch: Partial<Pick<Goal, "title" | "target" | "status" | "sports" | "period" | "startDate" | "endDate">>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   setSettings: (patch: Partial<Settings>) => void;
+  addManual: (input: ManualInput) => Promise<Activity>;
+  updateManual: (activity: Activity, input: ManualInput) => Promise<Activity>;
+  deleteManual: (activity: Activity) => Promise<void>;
   createInvite: () => Promise<{ code: string; expiresAt: string }>;
   acceptInvite: (code: string) => Promise<PartnerInfo>;
   unlink: () => Promise<void>;
@@ -79,6 +93,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS);
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
   const [linkAvailable, setLinkAvailable] = useState(false);
+  const [manualAvailable, setManualAvailable] = useState(false);
   const [today, setToday] = useState("");
   const [status, setStatus] = useState<DataState["status"]>("loading");
   const [stale, setStale] = useState(false);
@@ -93,13 +108,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const [m, a, g, l] = await Promise.all([
         api<AthleteInfo>("/api/me"),
-        api<{ activities: Activity[]; stale: boolean }>(`/api/activities${force ? "?refresh=1" : ""}`),
+        api<{ activities: Activity[]; stale: boolean; manualAvailable: boolean }>(`/api/activities${force ? "?refresh=1" : ""}`),
         api<{ goals: Goal[] }>("/api/goals"),
         // El vínculo es opcional: si falla no debe afectar al resto de la app.
         api<{ available: boolean; partner: PartnerInfo | null }>("/api/link").catch(() => ({ available: false, partner: null })),
       ]);
       setMe(m);
       setActivities(a.activities);
+      setManualAvailable(a.manualAvailable);
       setStale(a.stale);
       setGoals(g.goals);
       setPartner(l.partner);
@@ -161,6 +177,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setGoals((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
+  const addManual = useCallback(async (input: ManualInput) => {
+    const { activity } = await api<{ activity: Activity }>("/api/manual", { method: "POST", body: JSON.stringify(input) });
+    setActivities((prev) => [activity, ...prev]);
+    return activity;
+  }, []);
+
+  const updateManual = useCallback(async (old: Activity, input: ManualInput) => {
+    const { activity } = await api<{ activity: Activity }>(`/api/manual/${-old.id}`, { method: "PATCH", body: JSON.stringify(input) });
+    setActivities((prev) => prev.map((a) => (a.id === old.id ? activity : a)));
+    return activity;
+  }, []);
+
+  const deleteManual = useCallback(async (old: Activity) => {
+    await api(`/api/manual/${-old.id}`, { method: "DELETE" });
+    setActivities((prev) => prev.filter((a) => a.id !== old.id));
+  }, []);
+
   const createInvite = useCallback(() => api<{ code: string; expiresAt: string }>("/api/link/invite", { method: "POST" }), []);
 
   const acceptInvite = useCallback(async (code: string) => {
@@ -176,10 +209,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<DataState>(
     () => ({
-      me, activities, goals, settings, partner, linkAvailable, today, status, stale, error, refreshing,
-      refresh, createGoal, updateGoal, deleteGoal, setSettings, createInvite, acceptInvite, unlink,
+      me, activities, goals, settings, partner, linkAvailable, manualAvailable, today, status, stale, error, refreshing,
+      refresh, createGoal, updateGoal, deleteGoal, setSettings, addManual, updateManual, deleteManual, createInvite, acceptInvite, unlink,
     }),
-    [me, activities, goals, settings, partner, linkAvailable, today, status, stale, error, refreshing, refresh, createGoal, updateGoal, deleteGoal, setSettings, createInvite, acceptInvite, unlink],
+    [me, activities, goals, settings, partner, linkAvailable, manualAvailable, today, status, stale, error, refreshing, refresh, createGoal, updateGoal, deleteGoal, setSettings, addManual, updateManual, deleteManual, createInvite, acceptInvite, unlink],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

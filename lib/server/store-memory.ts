@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type { Activity, Goal } from "../types";
+import type { Activity, Goal, ManualActivity } from "../types";
 import { generateCode, INVITE_TTL_MS } from "../link-code";
 import type { AthleteRow, Store } from "./store";
 
@@ -8,6 +8,8 @@ interface Db {
   athletes: Map<number, AthleteRow>;
   goals: Map<number, Goal[]>;
   activities: Map<number, Map<number, Activity>>;
+  manual: Map<number, ManualActivity[]>;
+  manualSeq: number;
   invites: Map<string, { from: number; expiresAt: number }>;
   /** atleta → su pareja (se guarda en ambas direcciones). */
   links: Map<number, number>;
@@ -17,7 +19,7 @@ interface Db {
 const g = globalThis as unknown as { __sgMemDb?: Db };
 
 export function createMemoryStore(): Store {
-  const db: Db = (g.__sgMemDb ??= { athletes: new Map(), goals: new Map(), activities: new Map(), invites: new Map(), links: new Map() });
+  const db: Db = (g.__sgMemDb ??= { athletes: new Map(), goals: new Map(), activities: new Map(), invites: new Map(), links: new Map(), manual: new Map(), manualSeq: 0 });
   return {
     async getAthlete(id) {
       return db.athletes.get(id) ?? null;
@@ -37,6 +39,7 @@ export function createMemoryStore(): Store {
       db.athletes.delete(id);
       db.goals.delete(id);
       db.activities.delete(id);
+      db.manual.delete(id);
     },
     async listGoals(athleteId) {
       return [...(db.goals.get(athleteId) ?? [])];
@@ -61,6 +64,30 @@ export function createMemoryStore(): Store {
     },
     async listActivities(athleteId, sinceDate) {
       return [...(db.activities.get(athleteId)?.values() ?? [])].filter((a) => a.date >= sinceDate);
+    },
+    async listManual(athleteId, sinceDate) {
+      return (db.manual.get(athleteId) ?? []).filter((m) => m.date >= sinceDate);
+    },
+    async countManual(athleteId) {
+      return (db.manual.get(athleteId) ?? []).length;
+    },
+    async createManual(athleteId, input) {
+      const m: ManualActivity = { ...input, id: ++db.manualSeq, createdAt: new Date().toISOString() };
+      db.manual.set(athleteId, [m, ...(db.manual.get(athleteId) ?? [])]);
+      return m;
+    },
+    async updateManual(athleteId, id, input) {
+      const list = db.manual.get(athleteId) ?? [];
+      const i = list.findIndex((m) => m.id === id);
+      if (i < 0) return null;
+      list[i] = { ...list[i], ...input };
+      return list[i];
+    },
+    async deleteManual(athleteId, id) {
+      const list = db.manual.get(athleteId) ?? [];
+      const next = list.filter((m) => m.id !== id);
+      db.manual.set(athleteId, next);
+      return next.length !== list.length;
     },
     async createInvite(athleteId) {
       for (const [code, inv] of db.invites) if (inv.from === athleteId) db.invites.delete(code);

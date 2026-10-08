@@ -40,8 +40,9 @@ export function formatElevation(m: number, units: Units): string {
   return nf0.format(units === "metric" ? m : m * FT_PER_M);
 }
 
-/** `h:mm:ss` o `m:ss` para duraciones de actividad. */
+/** `h:mm:ss` o `m:ss` para duraciones de actividad; "–" si no se sabe (0). */
 export function formatDuration(sec: number): string {
+  if (!sec || sec <= 0) return "–";
   const s = Math.round(sec);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -72,6 +73,7 @@ export function formatSpeed(speedMs: number, units: Units): string {
 
 /** Ritmo para correr y caminar (como Strava), velocidad para bici, con su unidad. */
 export function formatPaceOrSpeed(sport: Sport, speedMs: number, units: Units): string {
+  if (!speedMs || speedMs <= 0) return "–"; // p. ej. una manual sin tiempo
   return sport !== "ride"
     ? `${formatPace(speedMs, units)} /${distanceUnit(units)}`
     : `${formatSpeed(speedMs, units)} ${distanceUnit(units)}/h`;

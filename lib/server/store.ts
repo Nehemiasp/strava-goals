@@ -1,5 +1,5 @@
 import "server-only";
-import type { Activity, Goal, NewGoal } from "../types";
+import type { Activity, Goal, ManualActivity, ManualInput, NewGoal } from "../types";
 import { hasSupabase, isDemo } from "./env";
 
 export interface AthleteRow {
@@ -37,6 +37,13 @@ export interface Store {
   updateGoal(athleteId: number, id: string, patch: GoalPatch): Promise<Goal | null>;
   deleteGoal(athleteId: number, id: string): Promise<boolean>;
   listActivities(athleteId: number, sinceDate: string): Promise<Activity[]>;
+  /** Actividades agregadas a mano con `date >= sinceDate`. */
+  listManual(athleteId: number, sinceDate: string): Promise<ManualActivity[]>;
+  countManual(athleteId: number): Promise<number>;
+  createManual(athleteId: number, input: ManualInput): Promise<ManualActivity>;
+  /** `null` si no existe o no es de este atleta. */
+  updateManual(athleteId: number, id: number, input: ManualInput): Promise<ManualActivity | null>;
+  deleteManual(athleteId: number, id: number): Promise<boolean>;
   /** Crea una invitación de 24 h para este atleta, reemplazando la anterior. */
   createInvite(athleteId: number): Promise<{ code: string; expiresAt: string }>;
   /** Consume una invitación y crea el vínculo. `code` ya viene normalizado. */

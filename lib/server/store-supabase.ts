@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
-import { ALL_SPORTS, type Activity, type Goal, type Sport } from "../types";
+import { ALL_SPORTS, type Activity, type Goal, type ManualActivity, type ManualInput, type Sport } from "../types";
 import { generateCode, INVITE_TTL_MS } from "../link-code";
 import { required } from "./env";
 import type { AthleteRow, GoalPatch, Store } from "./store";
@@ -39,6 +39,26 @@ const activityFrom = (r: Row): Activity => ({
   avgSpeed: r.avg_speed as number,
   avgHr: (r.avg_hr as number | null) ?? null,
   polyline: (r.polyline as string | null) ?? null,
+});
+
+const manualFrom = (r: Row): ManualActivity => ({
+  id: Number(r.id),
+  sport: r.sport as Sport,
+  date: r.date as string,
+  distance: r.distance as number,
+  movingTime: r.moving_time as number,
+  elevation: r.elevation as number,
+  name: r.name as string,
+  createdAt: r.created_at as string,
+});
+
+const manualTo = (m: ManualInput): Row => ({
+  sport: m.sport,
+  date: m.date,
+  distance: m.distance,
+  moving_time: m.movingTime,
+  elevation: m.elevation,
+  name: m.name,
 });
 
 const activityTo = (athleteId: number, a: Activity): Row => ({
@@ -163,6 +183,43 @@ export function createSupabaseStore(): Store {
         .limit(2000);
       fail("listActivities", error);
       return (data ?? []).map(activityFrom);
+    },
+    async listManual(athleteId, sinceDate) {
+      const { data, error } = await db
+        .from("manual_activities")
+        .select("*")
+        .eq("athlete_id", athleteId)
+        .gte("date", sinceDate)
+        .order("date", { ascending: false })
+        .limit(1000);
+      fail("listManual", error);
+      return (data ?? []).map(manualFrom);
+    },
+    async countManual(athleteId) {
+      const { count, error } = await db.from("manual_activities").select("id", { count: "exact", head: true }).eq("athlete_id", athleteId);
+      fail("countManual", error);
+      return count ?? 0;
+    },
+    async createManual(athleteId, input) {
+      const { data, error } = await db.from("manual_activities").insert({ athlete_id: athleteId, ...manualTo(input) }).select("*").single();
+      fail("createManual", error);
+      return manualFrom(data!);
+    },
+    async updateManual(athleteId, id, input) {
+      const { data, error } = await db
+        .from("manual_activities")
+        .update(manualTo(input))
+        .eq("athlete_id", athleteId)
+        .eq("id", id)
+        .select("*")
+        .maybeSingle();
+      fail("updateManual", error);
+      return data ? manualFrom(data) : null;
+    },
+    async deleteManual(athleteId, id) {
+      const { data, error } = await db.from("manual_activities").delete().eq("athlete_id", athleteId).eq("id", id).select("id");
+      fail("deleteManual", error);
+      return (data?.length ?? 0) > 0;
     },
     async createInvite(athleteId) {
       const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();

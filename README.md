@@ -6,6 +6,7 @@ El diseño está en [`DISEÑO.md`](./DISEÑO.md).
 - **Hoy**: semana actual, goal más cercano, últimas salidas y tendencia de 8 semanas.
 - **Actividad**: últimas 10 salidas con filtro Todo / Correr / Bici / Caminar (caminata y senderismo de Strava).
 - **Goals**: distancia, tiempo, desnivel, frecuencia o racha, con ritmo esperado y proyección. Cada goal elige qué deportes cuentan (cualquier combinación de correr, bici y caminar).
+- **Actividades a mano**: agrega una caminata, salida o rodada que no quedó en Strava; cuenta en goals, récords, Coach y el reto.
 - **Récords y resumen**: racha, mejor semana, salidas más largas, mejor ritmo y comparación con la semana/mes anterior.
 - **Reto entre hermanos**: vincula dos cuentas con un código de invitación y compara semana o mes. Solo se comparten totales por día y deporte.
 - **Coach**: exporta tus datos (Markdown/JSON) para llevarlos a la IA que prefieras. La app no llama a ninguna IA.
@@ -30,8 +31,8 @@ El modo demo usa actividades y goals de ejemplo en memoria. En producción nunca
    Límites: 200 lecturas cada 15 min y 2.000 al día (la app sincroniza como máximo cada 10 min por usuario).
    El permiso que pide la app es `read,activity:read_all`; los tokens que muestra el panel de Strava solo tienen `read`
    y no se usan: cada persona obtiene los suyos al iniciar sesión.
-2. **Supabase**: crea un proyecto y ejecuta, **en orden**, `supabase/migrations/0001_init.sql`, `0002_walk.sql` y `0003_links.sql` en el SQL editor.
-   La 0003 solo la necesita el reto entre hermanos; sin ella la app funciona y esa función se oculta.
+2. **Supabase**: crea un proyecto y ejecuta, **en orden**, `supabase/migrations/0001_init.sql`, `0002_walk.sql`, `0003_links.sql` y `0004_manual_activities.sql` en el SQL editor.
+   La 0003 solo la necesita el reto entre hermanos y la 0004 el botón para agregar actividades a mano; sin ellas la app funciona y esas funciones se ocultan.
    La 0002 añade Caminar y fuerza una resincronización completa para traer las caminatas ya existentes. Copia la URL y la
    *service role key*. Las tablas tienen RLS activado y sin políticas: solo el servidor puede acceder.
 3. **Secretos**: `SESSION_SECRET` y `TOKEN_ENC_KEY` con `openssl rand -base64 32`.

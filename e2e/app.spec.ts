@@ -236,7 +236,8 @@ test("Goals: editar fechas, deportes y objetivo de un goal", async ({ page }) =>
 test("Goals: el editor avisa si las fechas no son válidas", async ({ page }) => {
   await login(page);
   await page.getByRole("link", { name: "Goals" }).click();
-  await page.getByRole("link", { name: /3 salidas por semana/ }).click();
+  // El goal anual siempre está en "Activos"; el semanal puede estar ya cumplido según el día.
+  await page.getByRole("link", { name: /1\.500 km en bici este año/ }).click();
   await page.getByRole("button", { name: "Editar" }).click();
   const dialog = page.getByRole("dialog", { name: "Editar goal" });
   await dialog.getByLabel("Desde").fill("2026-12-20");
@@ -354,6 +355,134 @@ test("Reto entre hermanos: invitar, aceptar, comparar, privacidad y desvincular"
     await expect(a.getByText("Vínculo eliminado")).toBeVisible();
     expect((await a.request.get("/api/versus")).status()).toBe(403);
     expect((await b.request.get("/api/versus")).status()).toBe(403);
+  } finally {
+    await ctxA.close();
+    await ctxB.close();
+  }
+});
+
+test("Manual: agregar, ver, sumar en un goal, editar y eliminar una actividad", async ({ page }) => {
+  await login(page);
+  // Un goal de caminar para comprobar que lo manual suma.
+  await page.getByRole("link", { name: "Goals" }).click();
+  await page.getByRole("button", { name: "Nuevo goal" }).click();
+  await page.getByRole("button", { name: /Distancia/ }).click();
+  await page.getByPlaceholder("0").fill("3000");
+  await page.getByRole("checkbox", { name: "Caminar" }).click(); // primero se añade Caminar…
+  await page.getByRole("checkbox", { name: "Correr" }).click(); // …y luego se quita Correr: queda solo Caminar
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByLabel("Título").fill("Manual de prueba");
+  await page.getByRole("button", { name: "Crear goal" }).click();
+  const card = page.getByRole("link", { name: /Manual de prueba/ });
+  await expect(card).toBeVisible();
+  const before = await card.getAttribute("aria-label");
+
+  // Agregar una caminata manual de 42 km, sin tiempo.
+  await page.getByRole("link", { name: "Actividad" }).click();
+  await page.getByRole("button", { name: "Agregar actividad a mano" }).click();
+  const dialog = page.getByRole("dialog", { name: "Agregar actividad" });
+  await expect(dialog.getByText(/se contaría dos veces/)).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Agregar actividad" })).toBeDisabled();
+  await dialog.getByPlaceholder("0").first().fill("42");
+  await dialog.getByLabel("Nombre (opcional)").fill("Caminata del cerro");
+  await dialog.getByRole("button", { name: "Agregar actividad" }).click();
+  await expect(dialog).toBeHidden();
+
+  // Aparece con la etiqueta Manual (filtro Caminar) y sin tiempo.
+  await page.getByRole("radio", { name: "Caminar" }).click();
+  const row = page.getByRole("button", { name: /Caminata del cerro.*agregada a mano/ });
+  await expect(row).toBeVisible();
+  await expect(row).toContainText("Manual");
+  await expect(row).toContainText("Sin tiempo ni desnivel");
+
+  // Suma en el goal.
+  await page.getByRole("link", { name: "Goals" }).click();
+  const after = await page.getByRole("link", { name: /Manual de prueba/ }).getAttribute("aria-label");
+  const value = (label: string | null) => parseFloat(/\. ([\d.,]+) de /.exec(label ?? "")![1].replace(",", "."));
+  expect(value(after) - value(before)).toBeCloseTo(42, 1); // suma exactamente los 42 km manuales
+
+  // Detalle: sin enlace a Strava, con editar y eliminar.
+  await page.getByRole("link", { name: "Actividad" }).click();
+  await page.getByRole("radio", { name: "Caminar" }).click();
+  await page.getByRole("button", { name: /Caminata del cerro/ }).click();
+  const detail = page.getByRole("dialog", { name: "Caminata del cerro" });
+  await expect(detail.getByRole("link", { name: /Ver en Strava/ })).toHaveCount(0);
+
+  // Editar: cambia distancia y añade 1 h 30 min.
+  await detail.getByRole("button", { name: "Editar" }).click();
+  const edit = page.getByRole("dialog", { name: "Editar actividad" });
+  await expect(edit).toBeVisible();
+  await expect(edit.getByPlaceholder("0").first()).toHaveValue("42");
+  await edit.getByPlaceholder("0").first().fill("10");
+  await edit.getByLabel("Horas").fill("1");
+  await edit.getByLabel("Minutos").fill("30");
+  await edit.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(edit).toBeHidden();
+  const edited = page.getByRole("button", { name: /Caminata del cerro.*10,0 kilómetros, 1:30:00, agregada a mano/ });
+  await expect(edited).toBeVisible();
+
+  // Eliminar con confirmación.
+  await edited.click();
+  const d2 = page.getByRole("dialog", { name: "Caminata del cerro" });
+  await d2.getByRole("button", { name: "Eliminar" }).click();
+  await expect(d2.getByRole("alertdialog")).toBeVisible();
+  await d2.getByRole("alertdialog").getByRole("button", { name: "Eliminar" }).click();
+  await expect(page.getByRole("button", { name: /Caminata del cerro/ })).toHaveCount(0);
+});
+
+test("Manual: el formulario y la API rechazan datos inválidos y fechas futuras", async ({ page }) => {
+  await login(page);
+  const future = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10);
+  const bad = async (data: object) => (await page.request.post("/api/manual", { data })).status();
+  expect(await bad({ sport: "walk", date: future, distance: 5000 })).toBe(400);
+  expect(await bad({ sport: "walk", date: "2026-10-08", distance: 0 })).toBe(400);
+  expect(await bad({ sport: "swim", date: "2026-10-08", distance: 5000 })).toBe(400);
+  expect(await bad({ sport: "walk", date: "2020-01-01", distance: 5000 })).toBe(400);
+  expect((await page.request.patch("/api/manual/999999", { data: { sport: "walk", date: "2026-10-08", distance: 5000 } })).status()).toBe(404);
+  expect((await page.request.delete("/api/manual/abc")).status()).toBe(404);
+  const csrf = await page.request.post("/api/manual", {
+    headers: { Origin: "https://evil.example", "Content-Type": "application/json" },
+    data: { sport: "walk", date: "2026-10-08", distance: 5000 },
+  });
+  expect(csrf.status()).toBe(403);
+});
+
+test("Manual: lo agregado a mano cuenta en el reto, solo como totales", async ({ browser }) => {
+  const ctxA = await browser.newContext();
+  const ctxB = await browser.newContext();
+  const a = await ctxA.newPage();
+  const b = await ctxB.newPage();
+  try {
+    await login(a);
+    await b.goto("/api/auth/strava?as=2");
+    await expect(b.getByText("Esta semana", { exact: true })).toBeVisible();
+    await a.request.delete("/api/link");
+    await b.request.delete("/api/link");
+    const { code } = await (await a.request.post("/api/link/invite")).json();
+    expect((await b.request.post("/api/link/accept", { data: { code } })).status()).toBe(200);
+
+    // B mira los totales de A antes y después de que A agregue 100 km a mano.
+    const totalOfA = async () => {
+      const { days } = await (await b.request.get("/api/versus")).json();
+      return (days as { distance: number }[]).reduce((s, d) => s + d.distance, 0);
+    };
+    const before = await totalOfA();
+    const today = new Date().toISOString().slice(0, 10);
+    const created = await a.request.post("/api/manual", { data: { sport: "ride", date: today, distance: 100_000, name: "Secreta" } });
+    expect(created.status()).toBe(201);
+    const after = await totalOfA();
+    expect(after - before).toBe(100_000);
+
+    // De lo manual solo salen totales: ni nombre ni marca de manual.
+    const raw = JSON.stringify(await (await b.request.get("/api/versus")).json());
+    expect(raw).not.toContain("Secreta");
+    expect(raw).not.toContain("manual");
+
+    // Limpieza.
+    const { activity } = await created.json();
+    expect((await a.request.delete(`/api/manual/${-activity.id}`)).status()).toBe(200);
+    expect(await totalOfA()).toBe(before);
+    await a.request.delete("/api/link");
   } finally {
     await ctxA.close();
     await ctxB.close();

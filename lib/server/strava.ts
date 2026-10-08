@@ -104,6 +104,7 @@ export function mapActivity(a: RawActivity): Activity | null {
     avgSpeed: a.average_speed ?? 0,
     avgHr: a.average_heartrate ?? null,
     polyline: a.map?.summary_polyline || null,
+    source: "strava",
   };
 }
 

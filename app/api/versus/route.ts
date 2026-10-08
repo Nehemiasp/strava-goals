@@ -1,7 +1,7 @@
 import { addDays, todayLocal } from "@/lib/dates";
 import { fail, json, requireAthlete } from "@/lib/server/http";
 import { getStore } from "@/lib/server/store";
-import { getActivities, ReauthRequired } from "@/lib/server/sync";
+import { getActivities, listManualSafe, ReauthRequired } from "@/lib/server/sync";
 import type { Activity, PartnerInfo, SharedDay } from "@/lib/types";
 import { toSharedDays } from "@/lib/versus";
 
@@ -31,7 +31,8 @@ export async function GET() {
   } catch (e) {
     if (!(e instanceof ReauthRequired)) return fail(502, "No se pudieron cargar los datos");
     // Su sesión de Strava caducó: se muestra lo último guardado y se avisa.
-    activities = await store.listActivities(link.id, since);
+    // Lo agregado a mano también cuenta en el reto, igual que en el camino normal.
+    activities = [...(await store.listActivities(link.id, since)), ...(await listManualSafe(link.id, since)).activities];
     stale = true;
   }
 

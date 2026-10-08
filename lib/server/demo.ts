@@ -85,6 +85,7 @@ export function demoActivities(today: string, athleteId: number = DEMO_ATHLETE_I
         avgSpeed: speed,
         avgHr: rand() > 0.1 ? Math.round((sport === "run" ? 148 : sport === "ride" ? 138 : 108) + rand() * 14) : null,
         polyline: loop(rand, radius, 3 + Math.floor(rand() * 3)),
+        source: "strava",
       });
     }
   }

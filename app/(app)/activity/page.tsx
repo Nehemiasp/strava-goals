@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { ActivityList, ActivityRow } from "@/components/activity-row";
-import { IconRefresh } from "@/components/icons";
+import { IconPlus, IconRefresh } from "@/components/icons";
 import { SegmentedControl } from "@/components/segmented";
 import { StaleNotice, useScreenGate } from "@/components/screen-states";
 import { IconButton, TopBar } from "@/components/top-bar";
@@ -24,8 +24,8 @@ const EMPTY_OF: Record<Exclude<SportFilter, "all">, string> = { run: "correr", r
 
 export default function ActivityPage() {
   const gate = useScreenGate();
-  const { activities, settings, today, refresh, refreshing } = useData();
-  const { openActivity } = useUi();
+  const { activities, settings, today, refresh, refreshing, manualAvailable } = useData();
+  const { openActivity, openManual } = useUi();
   const [filter, setFilter] = usePersisted<SportFilter>("sg:filter", "all");
   const rows = useMemo(() => latest(activities, filter, 10), [activities, filter]);
   const total = rows.reduce((s, a) => s + a.distance, 0);
@@ -35,9 +35,16 @@ export default function ActivityPage() {
       <TopBar
         title="Actividad"
         right={
-          <IconButton label="Actualizar desde Strava" onClick={() => refresh(true)} spinning={refreshing}>
-            <IconRefresh size={22} strokeWidth={1.75} aria-hidden />
-          </IconButton>
+          <>
+            {manualAvailable && (
+              <IconButton label="Agregar actividad a mano" onClick={() => openManual()}>
+                <IconPlus size={24} strokeWidth={1.75} aria-hidden />
+              </IconButton>
+            )}
+            <IconButton label="Actualizar desde Strava" onClick={() => refresh(true)} spinning={refreshing}>
+              <IconRefresh size={22} strokeWidth={1.75} aria-hidden />
+            </IconButton>
+          </>
         }
       />
       <div className="enter space-y-5 pt-2">
